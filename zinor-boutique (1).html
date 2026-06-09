@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zinor — Boutique en ligne · Produits tendance · Paiement à la livraison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black:#0B0B0C;
+    --ink:#1A1A1C;
+    --gold:#C9A24B;
+    --gold-2:#E6CB7E;
+    --gold-deep:#A8842F;
+    --cream:#FAF7F0;
+    --paper:#FFFFFF;
+    --grey:#6B6A66;
+    --line:#ECE7DC;
+    --wa:#25D366;
+    --maxw:1180px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:"Plus Jakarta Sans",system-ui,sans-serif;
+    color:var(--ink);background:var(--paper);line-height:1.6;
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;
+  }
+  a{text-decoration:none;color:inherit}
+  img{max-width:100%;display:block}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 22px}
+  h1,h2,h3{font-family:"Fraunces",serif;font-weight:600;line-height:1.08;letter-spacing:-.01em}
+
+  .eyebrow{font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-deep);font-weight:600;display:inline-block}
+
+  /* buttons */
+  .btn{display:inline-flex;align-items:center;gap:9px;font-weight:600;font-size:15px;
+    padding:13px 24px;border-radius:50px;cursor:pointer;border:0;transition:transform .18s,box-shadow .25s,background .2s,color .2s}
+  .btn svg{width:18px;height:18px}
+  .btn-wa{background:var(--wa);color:#fff;box-shadow:0 10px 26px rgba(37,211,102,.32)}
+  .btn-wa:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(37,211,102,.45)}
+  .btn-gold{background:linear-gradient(135deg,var(--gold-2),var(--gold));color:#3a2c08;box-shadow:0 10px 26px rgba(201,162,75,.3)}
+  .btn-gold:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(201,162,75,.45)}
+  .btn-line{background:transparent;border:1.5px solid rgba(255,255,255,.3);color:#fff}
+  .btn-line:hover{border-color:var(--gold);color:var(--gold-2)}
+  .btn-dark{background:var(--black);color:#fff}
+  .btn-dark:hover{transform:translateY(-2px)}
+
+  /* ---------- HEADER ---------- */
+  header{position:fixed;top:0;left:0;right:0;z-index:60;transition:.3s;
+    background:rgba(11,11,12,.0);}
+  header.scrolled{background:rgba(11,11,12,.92);backdrop-filter:blur(12px);box-shadow:0 1px 0 rgba(201,162,75,.2)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:72px}
+  .logo{font-family:"Fraunces";font-weight:700;font-size:25px;letter-spacing:.04em;color:#fff;display:flex;align-items:center;gap:9px}
+  .logo .mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--gold-2),var(--gold-deep));display:grid;place-items:center;color:#1a1306;font-size:16px;font-weight:700}
+  .nav-links{display:flex;gap:28px;align-items:center}
+  .nav-links a{color:rgba(255,255,255,.8);font-size:14.5px;font-weight:500;transition:.2s}
+  .nav-links a:hover{color:var(--gold-2)}
+  .nav .btn-wa{padding:10px 18px;font-size:14px}
+  .burger{display:none;background:none;border:0;cursor:pointer;width:30px;height:24px;position:relative}
+  .burger span{position:absolute;left:0;right:0;height:2px;background:#fff;transition:.3s}
+  .burger span:nth-child(1){top:2px}.burger span:nth-child(2){top:11px}.burger span:nth-child(3){top:20px}
+
+  /* ---------- HERO ---------- */
+  .hero{position:relative;background:var(--black);color:#fff;padding:140px 0 90px;overflow:hidden}
+  .hero::before{content:"";position:absolute;inset:0;
+    background:radial-gradient(60% 80% at 75% 20%,rgba(201,162,75,.22),transparent 60%),
+               radial-gradient(50% 60% at 0% 100%,rgba(201,162,75,.1),transparent 60%)}
+  .hero .wrap{position:relative;z-index:2;display:grid;grid-template-columns:1.05fr .95fr;gap:50px;align-items:center}
+  .hero h1{font-size:clamp(40px,6.4vw,72px);margin:18px 0 20px}
+  .hero h1 em{font-style:italic;color:var(--gold-2)}
+  .hero p.sub{font-size:clamp(16px,2.2vw,19px);color:rgba(255,255,255,.78);max-width:520px;margin-bottom:30px}
+  .hero-cta{display:flex;gap:14px;flex-wrap:wrap}
+  .hero-trust{display:flex;gap:26px;flex-wrap:wrap;margin-top:36px}
+  .hero-trust .t{display:flex;align-items:center;gap:10px;font-size:14px;color:rgba(255,255,255,.85)}
+  .hero-trust .t svg{width:20px;height:20px;stroke:var(--gold-2);fill:none;stroke-width:1.7}
+
+  /* hero visual */
+  .hero-visual{position:relative;height:440px}
+  .pcard{position:absolute;border-radius:18px;background:linear-gradient(160deg,#171717,#0e0e0e);
+    border:1px solid rgba(201,162,75,.28);box-shadow:0 30px 70px rgba(0,0,0,.55);overflow:hidden}
+  .pcard .ph{height:100%;display:grid;place-items:center}
+  .pcard .ph svg{width:46%;height:46%;stroke:var(--gold-2);fill:none;stroke-width:1.3;opacity:.9}
+  .pcard .tagp{position:absolute;left:14px;bottom:12px;font-size:12px;color:var(--gold-2);font-weight:600;letter-spacing:.04em}
+  .pc1{width:62%;height:74%;top:4%;right:0;z-index:3}
+  .pc2{width:46%;height:50%;bottom:0;left:0;z-index:4;background:linear-gradient(160deg,#1d1d1d,#121212)}
+  .badge-float{position:absolute;top:6%;left:2%;z-index:5;background:linear-gradient(135deg,var(--gold-2),var(--gold));color:#3a2c08;
+    font-weight:700;font-size:13px;padding:10px 16px;border-radius:50px;box-shadow:0 12px 30px rgba(201,162,75,.4);transform:rotate(-6deg)}
+
+  /* ---------- MARQUEE / TRUST BAR ---------- */
+  .trustbar{background:var(--gold);color:#2a2008;overflow:hidden;white-space:nowrap}
+  .trustbar .track{display:inline-flex;gap:50px;padding:13px 0;animation:scroll 24s linear infinite;font-weight:600;font-size:14px;letter-spacing:.04em}
+  .trustbar .track span{display:inline-flex;align-items:center;gap:50px}
+  .trustbar .track b{font-weight:700}
+  @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+  /* ---------- OFFER ---------- */
+  .offer{background:var(--cream)}
+  .offer .wrap{padding:26px 22px}
+  .offer-band{background:linear-gradient(120deg,var(--black),#23211b);border-radius:20px;padding:34px 38px;
+    display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;
+    border:1px solid rgba(201,162,75,.3);position:relative;overflow:hidden}
+  .offer-band::after{content:"";position:absolute;right:-40px;top:-40px;width:200px;height:200px;border-radius:50%;
+    background:radial-gradient(circle,rgba(201,162,75,.35),transparent 70%)}
+  .offer-band .txt{position:relative;z-index:2}
+  .offer-band .eyebrow{color:var(--gold-2)}
+  .offer-band h3{color:#fff;font-size:clamp(22px,3.4vw,30px);margin:8px 0 4px}
+  .offer-band p{color:rgba(255,255,255,.7);font-size:15px}
+  .offer-band .btn{position:relative;z-index:2}
+
+  /* ---------- SECTION ---------- */
+  .sec{padding:80px 0}
+  .sec-head{text-align:center;max-width:620px;margin:0 auto 50px}
+  .sec-head h2{font-size:clamp(30px,5vw,46px);margin:14px 0 12px}
+  .sec-head p{color:var(--grey);font-size:16.5px}
+
+  /* ---------- PRODUCTS ---------- */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+  .prod{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--paper);
+    transition:transform .25s,box-shadow .25s,border-color .25s;display:flex;flex-direction:column}
+  .prod:hover{transform:translateY(-6px);box-shadow:0 24px 50px rgba(20,16,4,.1);border-color:var(--gold)}
+  .prod .imgwrap{position:relative;aspect-ratio:1/1;background:
+    radial-gradient(120% 120% at 30% 20%,#fbf7ee,#f1ead9);display:grid;place-items:center}
+  .prod .imgwrap svg{width:42%;height:42%;stroke:var(--gold-deep);fill:none;stroke-width:1.2;opacity:.85}
+  .prod .tag{position:absolute;top:13px;left:13px;font-size:11.5px;font-weight:700;letter-spacing:.05em;
+    text-transform:uppercase;padding:6px 12px;border-radius:50px}
+  .tag.promo{background:var(--black);color:var(--gold-2)}
+  .tag.new{background:linear-gradient(135deg,var(--gold-2),var(--gold));color:#3a2c08}
+  .tag.hot{background:#fff;color:var(--black);border:1px solid var(--line)}
+  .prod .body{padding:20px;display:flex;flex-direction:column;gap:12px;flex:1}
+  .prod h3{font-size:19px;font-weight:600}
+  .prod .desc{font-size:13.5px;color:var(--grey);flex:1}
+  .prod .rate{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--grey)}
+  .prod .rate .stars{color:var(--gold);letter-spacing:1px}
+  .prod .price{display:flex;align-items:baseline;gap:10px}
+  .prod .price .now{font-family:"Fraunces";font-weight:600;font-size:23px;color:var(--black)}
+  .prod .price .old{font-size:14px;color:#b3ab98;text-decoration:line-through}
+  .prod .btn-wa{width:100%;justify-content:center;margin-top:4px}
+
+  /* ---------- STEPS ---------- */
+  .steps-sec{background:var(--cream)}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+  .stepc{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:32px 26px;text-align:center;position:relative}
+  .stepc .n{width:52px;height:52px;border-radius:50%;margin:0 auto 18px;display:grid;place-items:center;
+    background:var(--black);color:var(--gold-2);font-family:"Fraunces";font-size:22px;font-weight:600}
+  .stepc h3{font-size:19px;margin-bottom:8px}
+  .stepc p{color:var(--grey);font-size:14.5px}
+
+  /* ---------- REVIEWS ---------- */
+  .reviews{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+  .rev{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:28px 26px}
+  .rev .stars{color:var(--gold);font-size:16px;letter-spacing:2px;margin-bottom:14px}
+  .rev p{font-size:15px;color:var(--ink);margin-bottom:18px}
+  .rev .who{display:flex;align-items:center;gap:12px}
+  .rev .av{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--gold-2),var(--gold-deep));
+    display:grid;place-items:center;color:#1a1306;font-weight:700;font-family:"Fraunces"}
+  .rev .who b{font-size:14.5px;display:block}
+  .rev .who span{font-size:13px;color:var(--grey)}
+
+  /* ---------- DELIVERY ---------- */
+  .deliv{background:var(--black);color:#fff}
+  .deliv .wrap{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;text-align:center}
+  .deliv .d .ic{width:56px;height:56px;border-radius:14px;margin:0 auto 16px;display:grid;place-items:center;
+    background:rgba(201,162,75,.14);border:1px solid rgba(201,162,75,.3)}
+  .deliv .d .ic svg{width:26px;height:26px;stroke:var(--gold-2);fill:none;stroke-width:1.6}
+  .deliv .d h3{font-size:18px;margin-bottom:6px}
+  .deliv .d p{color:rgba(255,255,255,.65);font-size:14px}
+
+  /* ---------- FINAL CTA ---------- */
+  .final{background:var(--cream);text-align:center}
+  .final .box{background:linear-gradient(120deg,var(--black),#211f18);border-radius:24px;padding:64px 30px;
+    position:relative;overflow:hidden;border:1px solid rgba(201,162,75,.3)}
+  .final .box::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 90% at 50% 0%,rgba(201,162,75,.2),transparent 60%)}
+  .final h2{color:#fff;font-size:clamp(28px,5vw,44px);position:relative;margin-bottom:14px}
+  .final h2 em{font-style:italic;color:var(--gold-2)}
+  .final p{color:rgba(255,255,255,.72);position:relative;max-width:480px;margin:0 auto 28px;font-size:16.5px}
+  .final .btn{position:relative}
+
+  /* ---------- FOOTER ---------- */
+  footer{background:var(--black);color:#fff;padding:56px 0 30px}
+  .foot{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:36px}
+  .foot .logo{margin-bottom:14px}
+  .foot p{color:rgba(255,255,255,.6);font-size:14px;max-width:260px}
+  .foot h4{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-2);margin-bottom:16px;font-weight:600}
+  .foot a{display:block;color:rgba(255,255,255,.7);font-size:14.5px;margin-bottom:10px;transition:.2s}
+  .foot a:hover{color:var(--gold-2)}
+  .foot .social{display:flex;gap:12px;margin-top:6px}
+  .foot .social a{width:38px;height:38px;border-radius:10px;border:1px solid rgba(255,255,255,.15);display:grid;place-items:center;margin:0}
+  .foot .social svg{width:18px;height:18px;fill:rgba(255,255,255,.8)}
+  .foot .social a:hover{border-color:var(--gold);background:rgba(201,162,75,.12)}
+  .copy{border-top:1px solid rgba(255,255,255,.1);margin-top:40px;padding-top:24px;text-align:center;
+    color:rgba(255,255,255,.5);font-size:13px}
+
+  /* ---------- FLOATING WHATSAPP ---------- */
+  .wa-float{position:fixed;right:20px;bottom:20px;z-index:80;width:60px;height:60px;border-radius:50%;
+    background:var(--wa);display:grid;place-items:center;box-shadow:0 12px 30px rgba(37,211,102,.45);
+    animation:bob 2.6s ease-in-out infinite}
+  .wa-float svg{width:30px;height:30px;fill:#fff}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+
+  /* reveal */
+  .reveal{opacity:0;transform:translateY(20px);transition:opacity .7s,transform .7s}
+  .reveal.in{opacity:1;transform:none}
+
+  /* ---------- RESPONSIVE ---------- */
+  @media(max-width:920px){
+    .hero .wrap{grid-template-columns:1fr;gap:30px}
+    .hero-visual{height:340px;max-width:420px}
+    .grid,.reviews{grid-template-columns:repeat(2,1fr)}
+    .deliv .wrap{grid-template-columns:repeat(2,1fr);gap:34px}
+    .foot{grid-template-columns:1fr 1fr}
+  }
+  @media(max-width:600px){
+    .nav-links{position:fixed;inset:72px 0 auto 0;background:rgba(11,11,12,.98);flex-direction:column;
+      gap:0;padding:10px 0;transform:translateY(-130%);transition:.32s;border-bottom:1px solid rgba(201,162,75,.2)}
+    .nav-links.open{transform:translateY(0)}
+    .nav-links a{padding:14px 22px;width:100%}
+    .nav .btn-wa{display:none}
+    .burger{display:block}
+    .grid,.reviews,.steps{grid-template-columns:1fr}
+    .offer-band{padding:26px 22px}
+    .sec{padding:60px 0}
+    .hero{padding-top:110px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *{animation:none!important}.reveal{opacity:1;transform:none;transition:none}
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header id="hdr">
+  <div class="wrap nav">
+    <a href="#" class="logo"><span class="mark">Z</span>Zinor</a>
+    <nav class="nav-links" id="menu">
+      <a href="#produits">Produits</a>
+      <a href="#commander">Commander</a>
+      <a href="#avis">Avis</a>
+      <a href="#livraison">Livraison</a>
+    </nav>
+    <a class="btn btn-wa order" href="#" data-product="">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zM6.6 20.013c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.82 9.82 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.247-.694.247-1.289.173-1.413z"/></svg>
+      Commander
+    </a>
+    <button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <div class="reveal">
+      <span class="eyebrow">Boutique en ligne · Algérie 🇩🇿</span>
+      <h1>Des produits <em>tendance</em><br>livrés chez vous,<br>payés à la livraison.</h1>
+      <p class="sub">Bienvenue chez Zinor. On sélectionne les produits les plus utiles et les plus stylés du moment. Vous commandez en un message, vous payez seulement quand le colis arrive.</p>
+      <div class="hero-cta">
+        <a class="btn btn-wa order" href="#" data-product="">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zM6.6 20.013c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.82 9.82 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.247-.694.247-1.289.173-1.413z"/></svg>
+          Commander sur WhatsApp
+        </a>
+        <a class="btn btn-line" href="#produits">Voir les produits</a>
+      </div>
+      <div class="hero-trust">
+        <div class="t"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Paiement à la livraison</div>
+        <div class="t"><svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Livraison 58 wilayas</div>
+        <div class="t"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.5 8.5 8 11 4.5-2.5 8-6 8-11V5l-8-3z"/></svg> Produits garantis</div>
+      </div>
+    </div>
+    <div class="hero-visual reveal" aria-hidden="true">
+      <span class="badge-float">-30% cette semaine</span>
+      <div class="pcard pc1">
+        <div class="ph"><svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M9 2h6M9 22h6"/></svg></div>
+        <span class="tagp">Montre connectée</span>
+      </div>
+      <div class="pcard pc2">
+        <div class="ph"><svg viewBox="0 0 24 24"><path d="M6 12a6 6 0 0112 0v4a2 2 0 01-2 2h-1v-6h3M6 12v4a2 2 0 002 2h1v-6H6"/></svg></div>
+        <span class="tagp">Écouteurs</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST MARQUEE -->
+<div class="trustbar" aria-hidden="true">
+  <div class="track">
+    <span><b>✓ Paiement à la livraison</b> · ✓ Livraison rapide dans toute l'Algérie · ✓ Produits 100% vérifiés · ✓ Retour facile · <b>✓ Paiement à la livraison</b> · ✓ Livraison rapide dans toute l'Algérie · ✓ Produits 100% vérifiés · ✓ Retour facile · </span>
+    <span><b>✓ Paiement à la livraison</b> · ✓ Livraison rapide dans toute l'Algérie · ✓ Produits 100% vérifiés · ✓ Retour facile · <b>✓ Paiement à la livraison</b> · ✓ Livraison rapide dans toute l'Algérie · ✓ Produits 100% vérifiés · ✓ Retour facile · </span>
+  </div>
+</div>
+
+<!-- OFFER -->
+<section class="offer">
+  <div class="wrap">
+    <div class="offer-band reveal">
+      <div class="txt">
+        <span class="eyebrow">Offre spéciale</span>
+        <h3>Livraison gratuite dès 5 000 DA</h3>
+        <p>Cette semaine seulement — profitez-en avant la fin de l'offre.</p>
+      </div>
+      <a class="btn btn-gold order" href="#" data-product="Offre spéciale - livraison gratuite">J'en profite</a>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCTS -->
+<section class="sec" id="produits">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Notre sélection</span>
+      <h2>Produits tendance du moment</h2>
+      <p>Choisissez votre produit, cliquez sur « Commander », et on vous livre. Vous payez à la réception.</p>
+    </div>
+    <div class="grid">
+
+      <article class="prod reveal">
+        <div class="imgwrap">
+          <span class="tag promo">-25%</span>
+          <svg viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="16" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M9 2h6M9 22h6"/></svg>
+        </div>
+        <div class="body">
+          <h3>Montre connectée Pro</h3>
+          <p class="desc">Appels, notifications, suivi du sport et de la santé. Écran tactile, batterie longue durée.</p>
+          <div class="rate"><span class="stars">★★★★★</span> 4,9 (212 avis)</div>
+          <div class="price"><span class="now">4 900 DA</span><span class="old">6 500 DA</span></div>
+          <a class="btn btn-wa order" href="#" data-product="Montre connectée Pro - 4 900 DA"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zM6.6 20.013c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.82 9.82 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.247-.694.247-1.289.173-1.413z"/></svg> Commander sur WhatsApp</a>
+        </div>
+      </article>
+
+      <article class="prod reveal">
+        <div class="imgwrap">
+          <span class="tag hot">Tendance</span>
+          <svg viewBox="0 0 24 24"><path d="M6 12a6 6 0 0112 0v4a2 2 0 01-2 2h-1v-6h3M6 12v4a2 2 0 002 2h1v-6H6"/></svg>
+        </div>
+        <div class="body">
+          <h3>Écouteurs sans fil</h3>
+          <p class="desc">Son clair, réduction de bruit, boîtier de charge. Parfaits pour la musique et les appels.</p>
+          <div class="rate"><span class="stars">★★★★★</span> 4,8 (340 avis)</div>
+          <div class="price"><span class="now">3 200 DA</span><span class="old">4 200 DA</span></div>
+          <a class="btn btn-wa order" href="#" data-product="Écouteurs sans fil - 3 200 DA"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zM6.6 20.013c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.82 9.82 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.247-.694.247-1.289.173-1.413z"/></svg> Commander sur WhatsApp</a>
+        </div>
+      </article>
+
+      <article class="prod reveal">
+        <div class="imgwrap">
+          <span class="tag new">Nouveau</span>
+          <svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12c.6.6 1 1.4 1 2h6c0-.6.4-1.4 1-2a7 7 0 00-4-12z"/></svg>
+        </div>
+        <div class="body">
+          <h3>Lampe LED rechargeable</h3>
+          <p class="desc">Lumière douce et réglable, sans fil. Idéale pour le bureau, la table de nuit ou les coupures.</p>
+          <div class="rate"><span class="stars">★★★★★</span> 4,9 (98 avis)</div>
+          <div class="price"><span class="now">2 400 DA</span><span class="old">3 100 DA</span></div>
+          <a class="btn btn-wa order" href="#" data-product="Lampe LED rechargeable - 2 400 DA"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zM6.6 20.013c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.82 9.82 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.247-.694.247-1.289.173-1.413z"/></svg> Commander sur WhatsApp</a>
+        </div>
+      </article>
+
+      <article class="prod reveal">
+        <div class="imgwrap">
+          <span class="tag promo">-20%</span>
+          <svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M8 6V4h8v2"/></svg>
+        </div>
+        <div class="body">
+          <h3>Mini projecteur portable</h3>
+          <p class="desc">Transformez votre mur en cinéma. Compatible téléphone, USB et HDMI. Facile à transporter.</p>
+          <div class="rate"><span class="stars">★★★★☆</span> 4,7 (76 avis)</div>
+          <div class="price"><span class="now">8 900 DA</span><span class="old">11 000 DA</span></div>
+          <a class="btn btn-wa order" href="#" data-product="Mini projecteur portable - 8 900 DA"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zM6.6 20.013c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.82 9.82 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.247-.694.247-1.289.173-1.413z"/></svg> Commander sur WhatsApp</a>
+        </div>
+      </article>
+
+      <article class="prod reveal">
+        <div class="imgwrap">
+          <span class="tag hot">Tendance</span>
+          <svg viewBox="0 0 24 24"><path d="M4 7h16l-1 13H5L4 7zM8 7V5a4 4 0 018 0v2"/></svg>
+        </div>
+        <div class="body">
+          <h3>Organisateur de voyage</h3>
+          <p class="desc">Rangez vêtements et accessoires sans froisser. Léger, solide, gain de place garanti.</p>
+          <div class="rate"><span class="stars">★★★★★</span> 4,8 (154 avis)</div>
+          <div class="price"><span class="now">1 900 DA</span><span class="old">2 600 DA</span></div>
+          <a class="btn btn-wa order" href="#" data-product="Organisateur de voyage - 1 900 DA"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zM6.6 20.013c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.82 9.82 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.247-.694.247-1.289.173-1.413z"/></svg> Commander sur WhatsApp</a>
+        </div>
+      </article>
+
+      <article class="prod reveal">
+        <div class="imgwrap">
+          <span class="tag new">Nouveau</span>
+          <svg viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10l-1 9a4 4 0 01-8 0L7 4zM6 8c-2 0-2 3 0 3M18 8c2 0 2 3 0 3"/></svg>
+        </div>
+        <div class="body">
+          <h3>Diffuseur d'arômes</h3>
+          <p class="desc">Parfume et humidifie votre intérieur. Lumière d'ambiance LED, fonctionnement silencieux.</p>
+          <div class="rate"><span class="stars">★★★★★</span> 4,9 (67 avis)</div>
+          <div class="price"><span class="now">2 700 DA</span><span class="old">3 500 DA</span></div>
+          <a class="btn btn-wa order" href="#" data-product="Diffuseur d'arômes - 2 700 DA"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zM6.6 20.013c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.82 9.82 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.247-.694.247-1.289.173-1.413z"/></svg> Commander sur WhatsApp</a>
+        </div>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<!-- STEPS -->
+<section class="sec steps-sec" id="commander">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Simple et rapide</span>
+      <h2>Commander en 3 étapes</h2>
+      <p>Pas de paiement en ligne, pas de carte bancaire. Vous payez en main propre à la livraison.</p>
+    </div>
+    <div class="steps">
+      <div class="stepc reveal"><div class="n">1</div><h3>Choisissez</h3><p>Sélectionnez le produit qui vous plaît parmi notre sélection tendance.</p></div>
+      <div class="stepc reveal"><div class="n">2</div><h3>Commandez sur WhatsApp</h3><p>Cliquez sur « Commander » et envoyez-nous votre nom, numéro et adresse.</p></div>
+      <div class="stepc reveal"><div class="n">3</div><h3>Payez à la livraison</h3><p>On vous livre rapidement. Vous payez seulement quand vous recevez le colis.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section class="sec" id="avis">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Ils ont commandé chez Zinor</span>
+      <h2>Avis de nos clients</h2>
+      <p>Plus de 1 200 clients satisfaits dans toute l'Algérie.</p>
+    </div>
+    <div class="reviews">
+      <div class="rev reveal">
+        <div class="stars">★★★★★</div>
+        <p>« Commande passée le soir, livrée le surlendemain à Oran. Produit conforme et de bonne qualité. Je recommande ! »</p>
+        <div class="who"><div class="av">A</div><div><b>Amine B.</b><span>Oran</span></div></div>
+      </div>
+      <div class="rev reveal">
+        <div class="stars">★★★★★</div>
+        <p>« J'ai aimé pouvoir payer à la livraison, c'est rassurant. Le livreur était à l'heure et très correct. »</p>
+        <div class="who"><div class="av">S</div><div><b>Sara M.</b><span>Alger</span></div></div>
+      </div>
+      <div class="rev reveal">
+        <div class="stars">★★★★★</div>
+        <p>« La montre connectée est top pour le prix. Réponse rapide sur WhatsApp pour toutes mes questions. »</p>
+        <div class="who"><div class="av">Y</div><div><b>Yacine K.</b><span>Constantine</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DELIVERY -->
+<section class="sec deliv" id="livraison">
+  <div class="wrap">
+    <div class="d reveal"><div class="ic"><svg viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div><h3>58 wilayas</h3><p>On livre partout en Algérie, du nord au sud.</p></div>
+    <div class="d reveal"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h3>Livraison rapide</h3><p>2 à 4 jours selon votre wilaya.</p></div>
+    <div class="d reveal"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div><h3>Paiement à la livraison</h3><p>Vous payez en espèces à la réception.</p></div>
+    <div class="d reveal"><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1018 0M3 12l3-3M3 12l3 3"/><path d="M21 12l-3-3M21 12l-3 3"/></svg></div><h3>Retour facile</h3><p>Produit non conforme ? On s'en occupe.</p></div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="sec final">
+  <div class="wrap">
+    <div class="box reveal">
+      <h2>Prêt à <em>commander</em> ?</h2>
+      <p>Envoyez-nous un message sur WhatsApp. On vous répond vite, et vous payez seulement à la livraison.</p>
+      <a class="btn btn-wa order" href="#" data-product="">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zM6.6 20.013c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.82 9.82 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.247-.694.247-1.289.173-1.413z"/></svg>
+        Commander sur WhatsApp
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <a href="#" class="logo"><span class="mark">Z</span>Zinor</a>
+        <p>Votre boutique en ligne en Algérie. Produits tendance et utiles, livrés chez vous avec paiement à la livraison.</p>
+        <div class="social">
+          <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24"><path d="M22 12a10 10 0 10-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.3v7A10 10 0 0022 12z"/></svg></a>
+          <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24"><path d="M12 2.2c3.2 0 3.6 0 4.9.1 3.3.1 4.8 1.7 4.9 4.9.1 1.3.1 1.6.1 4.8s0 3.5-.1 4.8c-.1 3.2-1.7 4.8-4.9 4.9-1.3.1-1.6.1-4.9.1s-3.6 0-4.9-.1c-3.2-.1-4.8-1.7-4.9-4.9C2.1 15.5 2 15.2 2 12s0-3.5.1-4.8C2.3 4 3.9 2.4 7.1 2.3 8.4 2.2 8.8 2.2 12 2.2zm0 4.9a4.9 4.9 0 100 9.8 4.9 4.9 0 000-9.8zm0 8a3.1 3.1 0 110-6.2 3.1 3.1 0 010 6.2zm5.1-8.3a1.1 1.1 0 100 2.3 1.1 1.1 0 000-2.3z"/></svg></a>
+          <a href="#" aria-label="TikTok"><svg viewBox="0 0 24 24"><path d="M16.5 2c.3 2.2 1.5 3.6 3.5 3.8V8c-1.3.1-2.5-.3-3.5-1v6.7c0 3.4-2.5 5.8-5.6 5.8-3 0-5.4-2.2-5.4-5.3 0-3.2 2.6-5.4 6-5v2.6c-.4-.1-.9-.2-1.4-.1-1.3.2-2.1 1.1-2 2.4.1 1.3 1.1 2.1 2.4 2 1.3-.1 2-1 2-2.4V2h3.6z"/></svg></a>
+        </div>
+      </div>
+      <div>
+        <h4>Boutique</h4>
+        <a href="#produits">Produits tendance</a>
+        <a href="#produits">Offres spéciales</a>
+        <a href="#avis">Avis clients</a>
+      </div>
+      <div>
+        <h4>Aide</h4>
+        <a href="#commander">Comment commander</a>
+        <a href="#livraison">Livraison</a>
+        <a href="#" class="order" data-product="">Nous contacter</a>
+      </div>
+      <div>
+        <h4>Contact</h4>
+        <a href="#" class="order" data-product="">📱 WhatsApp</a>
+        <a href="#">📍 Algérie</a>
+        <a href="#">🕐 Sam — Jeu, 9h-19h</a>
+      </div>
+    </div>
+    <div class="copy">© 2026 Zinor — Boutique en ligne. Tous droits réservés. · Paiement à la livraison partout en Algérie.</div>
+  </div>
+</footer>
+
+<!-- FLOATING WHATSAPP -->
+<a class="wa-float order" href="#" data-product="" aria-label="Commander sur WhatsApp">
+  <svg viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zM6.6 20.013c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.82 9.82 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.247-.694.247-1.289.173-1.413z"/></svg>
+</a>
+
+<script>
+  /* ====== À PERSONNALISER : votre numéro WhatsApp (format international, sans + ni espaces) ====== */
+  const WHATSAPP_NUMBER = "213780487701"; // Numéro WhatsApp de la boutique Zinor
+
+  // Construit le lien WhatsApp avec un message pré-rempli
+  function waLink(product){
+    const base = product
+      ? `Bonjour Zinor 👋, je souhaite commander : ${product}.`
+      : `Bonjour Zinor 👋, je souhaite passer une commande.`;
+    const msg = encodeURIComponent(base + "\nMon nom :\nMa wilaya :\nMon adresse :");
+    return `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
+  }
+  document.querySelectorAll('.order').forEach(el=>{
+    el.setAttribute('target','_blank');
+    el.setAttribute('rel','noopener');
+    el.href = waLink(el.dataset.product || "");
+  });
+
+  // header scroll
+  const hdr=document.getElementById('hdr');
+  addEventListener('scroll',()=>hdr.classList.toggle('scrolled',scrollY>20));
+
+  // mobile menu
+  const burger=document.getElementById('burger'), menu=document.getElementById('menu');
+  burger.addEventListener('click',()=>menu.classList.toggle('open'));
+  menu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>menu.classList.remove('open')));
+
+  // reveal on scroll
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{threshold:.14});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>
