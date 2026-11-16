@@ -113,27 +113,7 @@ const CaptionPage: React.FC<{ page: Page; pageStart: number }> = ({ page, pageSt
   );
 };
 
-// ---------- brand + end card ----------
-const BrandTag: React.FC = () => (
-  <AbsoluteFill style={{ alignItems: "center", paddingTop: 120 }}>
-    <div
-      style={{
-        fontFamily: FONT,
-        fontWeight: 900,
-        fontSize: 54,
-        color: "#fff",
-        background: "rgba(11,11,12,0.55)",
-        border: `2px solid ${GOLD}`,
-        borderRadius: 999,
-        padding: "4px 40px 10px",
-        letterSpacing: 1,
-      }}
-    >
-      زين<span style={{ color: GOLD }}>ور</span>
-    </div>
-  </AbsoluteFill>
-);
-
+// ---------- end card ----------
 const EndCard: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -155,13 +135,13 @@ const EndCard: React.FC = () => {
         textAlign: "center",
       }}
     >
-      <div style={{ fontWeight: 900, fontSize: 170, transform: `scale(${a})`, lineHeight: 1.2 }}>
-        زين<span style={{ color: GOLD }}>ور</span>
+      <div style={{ fontWeight: 900, fontSize: 130, lineHeight: 1.25, transform: `scale(${a})` }}>
+        عبايات <span style={{ color: GOLD }}>المخمل</span>
       </div>
-      <div style={{ fontWeight: 700, fontSize: 62, opacity: a, marginTop: 6 }}>عبايات المخمل · شتاء 2027</div>
+      <div style={{ fontWeight: 700, fontSize: 64, opacity: a, marginTop: 4, color: GOLD }}>شتاء 2027</div>
       <div
         style={{
-          marginTop: 70,
+          marginTop: 80,
           background: GOLD,
           color: "#0B0B0C",
           fontWeight: 900,
@@ -207,10 +187,6 @@ export const AbayaAd: React.FC = () => {
             "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.45) 78%, rgba(0,0,0,0.25) 100%)",
         }}
       />
-
-      <Sequence durationInFrames={f(VOICE_END)}>
-        <BrandTag />
-      </Sequence>
 
       {PAGES.map((p, i) => {
         const start = p.words[0].start;
