@@ -135,10 +135,9 @@ const EndCard: React.FC = () => {
         textAlign: "center",
       }}
     >
-      <div style={{ fontWeight: 900, fontSize: 130, lineHeight: 1.25, transform: `scale(${a})` }}>
-        عبايات <span style={{ color: GOLD }}>المخمل</span>
+      <div style={{ fontWeight: 900, fontSize: 104, lineHeight: 1.25, whiteSpace: "nowrap", transform: `scale(${a})` }}>
+        عبايات <span style={{ color: GOLD }}>شمس 2027</span>
       </div>
-      <div style={{ fontWeight: 700, fontSize: 64, opacity: a, marginTop: 4, color: GOLD }}>شتاء 2027</div>
       <div
         style={{
           marginTop: 80,
