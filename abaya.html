@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>عباية المخمل الفاخرة · زينور</title>
+<meta name="description" content="عباية مخمل فاخرة بخمسة ألوان، قصة واسعة وأنيقة. توصيل إلى 58 ولاية والدفع عند الاستلام.">
+<meta property="og:title" content="عباية المخمل الفاخرة · زينور">
+<meta property="og:image" content="assets/abaya/poster.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black:#0B0B0C;
+    --ink:#1A1A1C;
+    --gold:#C9A24B;
+    --gold-soft:#E8D6A6;
+    --gold-deep:#A8842F;
+    --cream:#FAF7F0;
+    --paper:#FFFFFF;
+    --grey:#6B6A66;
+    --line:#ECE7DC;
+    --wa:#25D366;
+    --wa-deep:#1DA851;
+    --red:#B3261E;
+    --maxw:1120px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"Tajawal",system-ui,sans-serif;background:var(--cream);color:var(--ink);line-height:1.7;-webkit-font-smoothing:antialiased;padding-bottom:84px}
+  img,video{display:block;max-width:100%}
+  a{color:inherit;text-decoration:none}
+  h1,h2,h3{font-family:"El Messiri",serif;line-height:1.3;font-weight:700}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 16px}
+
+  /* top bar + header */
+  .topbar{background:var(--black);color:var(--gold-soft);font-size:.86rem;text-align:center;padding:8px 16px;font-weight:500}
+  header{background:var(--paper);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+  header .wrap{display:flex;align-items:center;justify-content:space-between;height:62px}
+  .logo{font-family:"El Messiri",serif;font-size:1.5rem;font-weight:700;letter-spacing:.5px}
+  .logo span{color:var(--gold)}
+  .back{font-size:.92rem;color:var(--grey);font-weight:500}
+  .back:hover{color:var(--ink)}
+
+  /* hero */
+  .hero{padding:28px 0 40px}
+  .hero .wrap{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:40px;align-items:start}
+  .media{position:relative;border-radius:18px;overflow:hidden;background:var(--black);aspect-ratio:9/16;box-shadow:0 18px 40px -18px rgba(0,0,0,.45)}
+  .media video,.media img{width:100%;height:100%;object-fit:cover}
+  .media img{position:absolute;inset:0;opacity:0;transition:opacity .35s}
+  .media.showing-img img{opacity:1}
+  .badge{position:absolute;top:14px;right:14px;background:var(--red);color:#fff;font-weight:700;font-size:.85rem;padding:5px 12px;border-radius:999px;z-index:2}
+  .play-toggle{position:absolute;bottom:14px;left:14px;z-index:2;background:rgba(0,0,0,.55);color:#fff;border:0;border-radius:999px;padding:7px 14px;font:inherit;font-size:.82rem;cursor:pointer}
+
+  .info .kicker{color:var(--gold-deep);font-weight:700;font-size:.95rem;letter-spacing:.3px}
+  .info h1{font-size:clamp(1.9rem,4.5vw,2.8rem);margin:6px 0 10px}
+  .rating{display:flex;align-items:center;gap:8px;color:var(--grey);font-size:.92rem}
+  .stars{color:var(--gold);letter-spacing:2px;font-size:1.05rem}
+  .price{display:flex;align-items:baseline;gap:14px;margin:18px 0 6px;flex-wrap:wrap}
+  .price .now{font-size:2.1rem;font-weight:800;color:var(--ink)}
+  .price .old{font-size:1.15rem;color:var(--grey);text-decoration:line-through}
+  .price .save{background:#FBEAE8;color:var(--red);font-weight:700;font-size:.85rem;padding:3px 10px;border-radius:6px}
+  .lead{color:#3a3936;font-size:1.05rem;margin:12px 0 20px;max-width:56ch}
+
+  .label{font-weight:700;margin-bottom:10px;display:flex;gap:8px;align-items:center}
+  .label small{font-weight:500;color:var(--grey);font-size:.92rem}
+  .swatches{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:22px}
+  .sw{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);background:var(--paper);border-radius:999px;padding:6px 14px 6px 8px;cursor:pointer;font:inherit;font-weight:500;font-size:.95rem;color:var(--ink);transition:border-color .2s,box-shadow .2s}
+  .sw i{width:24px;height:24px;border-radius:50%;display:block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+  .sw[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--gold-soft)}
+
+  .sizes{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+  .sz{min-width:56px;border:1.5px solid var(--line);background:var(--paper);border-radius:10px;padding:8px 12px;cursor:pointer;font:inherit;font-weight:700;color:var(--ink)}
+  .sz[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:0;border-radius:12px;padding:15px 22px;font:inherit;font-weight:800;font-size:1.08rem;cursor:pointer;transition:transform .15s,background .2s}
+  .btn:active{transform:scale(.98)}
+  .btn svg{width:22px;height:22px}
+  .btn-gold{background:var(--black);color:var(--gold-soft);width:100%}
+  .btn-gold:hover{background:var(--ink)}
+  .btn-wa{background:var(--wa);color:#fff;width:100%}
+  .btn-wa:hover{background:var(--wa-deep)}
+
+  .trust{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+  .trust div{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 8px;text-align:center;font-size:.86rem;font-weight:500;color:#3a3936}
+  .trust b{display:block;font-size:1.25rem;margin-bottom:2px}
+
+  /* sections */
+  .sec{padding:56px 0}
+  .sec-title{text-align:center;margin-bottom:32px}
+  .sec-title h2{font-size:clamp(1.6rem,3.6vw,2.2rem)}
+  .sec-title p{color:var(--grey);margin-top:6px}
+  .dark{background:var(--black);color:#EDE9E0}
+  .dark .sec-title p{color:#A9A59B}
+
+  .gallery{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+  .g{background:none;border:0;padding:0;cursor:pointer;text-align:center;color:inherit;font:inherit}
+  .g img{width:100%;aspect-ratio:3/5;object-fit:cover;border-radius:14px;border:2px solid transparent;transition:border-color .2s,transform .25s}
+  .g:hover img{transform:translateY(-3px)}
+  .g[aria-pressed="true"] img{border-color:var(--gold)}
+  .g span{display:block;margin-top:8px;font-weight:700}
+
+  .features{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .feat{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px 18px}
+  .feat .ic{width:44px;height:44px;border-radius:12px;background:#F4EBD3;display:grid;place-items:center;font-size:1.3rem;margin-bottom:12px}
+  .feat h3{font-size:1.15rem;margin-bottom:4px}
+  .feat p{color:var(--grey);font-size:.95rem}
+
+  /* order form */
+  .order-box{max-width:620px;margin:0 auto;background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:26px 20px;box-shadow:0 18px 40px -26px rgba(0,0,0,.35)}
+  .summary{display:flex;gap:14px;align-items:center;background:var(--cream);border-radius:14px;padding:10px;margin-bottom:20px}
+  .summary img{width:62px;height:84px;object-fit:cover;border-radius:10px}
+  .summary .s-name{font-weight:700}
+  .summary .s-meta{color:var(--grey);font-size:.92rem}
+  .summary .s-total{margin-inline-start:auto;font-weight:800;font-size:1.15rem;white-space:nowrap}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+  .field label{font-weight:700;font-size:.95rem}
+  .field input,.field select,.field textarea{font:inherit;font-size:1rem;border:1.5px solid var(--line);border-radius:10px;padding:11px 12px;background:#fff;color:var(--ink);width:100%}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--gold)}
+  .field.err input,.field.err select{border-color:var(--red)}
+  .field .msg{color:var(--red);font-size:.85rem;display:none}
+  .field.err .msg{display:block}
+  .qty{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:10px;overflow:hidden;width:max-content}
+  .qty button{width:42px;height:44px;border:0;background:var(--cream);font:inherit;font-size:1.3rem;cursor:pointer}
+  .qty output{min-width:44px;text-align:center;font-weight:800}
+  .note{color:var(--grey);font-size:.88rem;text-align:center;margin-top:12px}
+
+  /* FAQ */
+  .faq{max-width:720px;margin:0 auto}
+  .faq details{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:14px 18px;margin-bottom:10px}
+  .faq summary{font-weight:700;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:12px}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"+";color:var(--gold-deep);font-size:1.3rem;line-height:1}
+  .faq details[open] summary::after{content:"−"}
+  .faq p{color:var(--grey);margin-top:8px}
+
+  footer{background:var(--black);color:#A9A59B;text-align:center;padding:28px 16px;font-size:.9rem}
+  footer .logo{color:#fff;display:block;margin-bottom:6px}
+
+  /* sticky mobile CTA */
+  .sticky{position:fixed;bottom:0;left:0;right:0;z-index:30;background:var(--paper);border-top:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;box-shadow:0 -8px 24px -12px rgba(0,0,0,.2);transform:translateY(110%);transition:transform .3s}
+  .sticky.on{transform:none}
+  .sticky .p{font-weight:800;font-size:1.1rem;white-space:nowrap}
+  .sticky .p small{display:block;font-weight:500;font-size:.8rem;color:var(--grey)}
+  .sticky .btn{padding:13px 16px;font-size:1rem}
+
+  @media (max-width:900px){
+    .hero .wrap{grid-template-columns:1fr;gap:24px}
+    .media{max-width:420px;width:100%;margin:0 auto}
+    .gallery{grid-template-columns:repeat(3,1fr)}
+    .features{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width:520px){
+    .gallery{grid-template-columns:repeat(2,1fr)}
+    .features{grid-template-columns:1fr}
+    .grid2{grid-template-columns:1fr;gap:0}
+    .trust{gap:6px}
+    .trust div{font-size:.78rem}
+    .sec{padding:44px 0}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+
+<div class="topbar">🚚 توصيل إلى 58 ولاية · الدفع عند الاستلام · كمية محدودة</div>
+
+<header>
+  <div class="wrap">
+    <a class="logo" href="index.html">زين<span>ور</span></a>
+    <a class="back" href="index.html">← العودة إلى المتجر</a>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="wrap">
+    <div class="media" id="media">
+      <span class="badge" id="badge" dir="ltr">تخفيض</span>
+      <video id="vid" src="assets/abaya/video.mp4" poster="assets/abaya/poster.jpg" autoplay muted loop playsinline preload="metadata"></video>
+      <img id="mediaImg" src="assets/abaya/mauve.jpg" alt="">
+      <button class="play-toggle" id="playToggle" type="button">▶ شاهدي الفيديو</button>
+    </div>
+
+    <div class="info">
+      <div class="kicker">مجموعة الشتاء · مخمل فاخر</div>
+      <h1>عباية المخمل الفاخرة</h1>
+      <div class="rating"><span class="stars">★★★★★</span><span>أناقة ودفء في قطعة واحدة</span></div>
+
+      <div class="price">
+        <span class="now" id="priceNow"></span>
+        <span class="old" id="priceOld"></span>
+        <span class="save" id="priceSave"></span>
+      </div>
+
+      <p class="lead">عباية واسعة من المخمل الناعم بلمعة راقية، بأكمام عريضة وقصة منسدلة تمنحك حضوراً أنيقاً في السهرات والمناسبات والخرجات اليومية. دافئة في الشتاء ومريحة طوال اليوم.</p>
+
+      <div class="label">اللون: <small id="colorName"></small></div>
+      <div class="swatches" id="swatches"></div>
+
+      <div class="label">المقاس <small>(الطول)</small></div>
+      <div class="sizes" id="sizes"></div>
+
+      <a href="#order" class="btn btn-gold">اطلبي الآن · الدفع عند الاستلام</a>
+
+      <div class="trust">
+        <div><b>🚚</b>توصيل 58 ولاية</div>
+        <div><b>💵</b>الدفع عند الاستلام</div>
+        <div><b>🔄</b>استبدال سهل</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COLOURS ============ -->
+<section class="sec dark">
+  <div class="wrap">
+    <div class="sec-title">
+      <h2>خمسة ألوان، اختاري لونك</h2>
+      <p>اضغطي على اللون لاختياره</p>
+    </div>
+    <div class="gallery" id="gallery"></div>
+  </div>
+</section>
+
+<!-- ============ FEATURES ============ -->
+<section class="sec">
+  <div class="wrap">
+    <div class="sec-title">
+      <h2>لماذا ستحبينها؟</h2>
+    </div>
+    <div class="features">
+      <div class="feat"><div class="ic">✨</div><h3>مخمل ناعم لامع</h3><p>قماش كثيف بلمعة حريرية تعكس الضوء بأناقة.</p></div>
+      <div class="feat"><div class="ic">🧥</div><h3>قصة واسعة منسدلة</h3><p>أكمام عريضة وحركة جميلة مع كل خطوة.</p></div>
+      <div class="feat"><div class="ic">❄️</div><h3>دافئة في الشتاء</h3><p>مثالية للبرد دون أن تفقدي أناقتك.</p></div>
+      <div class="feat"><div class="ic">💎</div><h3>لكل المناسبات</h3><p>سهرات، أعراس، زيارات وخرجات يومية.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ORDER FORM ============ -->
+<section class="sec" id="order" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-title">
+      <h2>أكملي طلبك</h2>
+      <p>املئي المعلومات وسنؤكد طلبك عبر واتساب</p>
+    </div>
+
+    <form class="order-box" id="orderForm" novalidate>
+      <div class="summary">
+        <img id="sumImg" src="assets/abaya/mauve.jpg" alt="">
+        <div>
+          <div class="s-name">عباية المخمل الفاخرة</div>
+          <div class="s-meta" id="sumMeta"></div>
+        </div>
+        <div class="s-total" id="sumTotal"></div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label for="fColor">اللون</label>
+          <select id="fColor"></select>
+        </div>
+        <div class="field">
+          <label for="fSize">المقاس</label>
+          <select id="fSize"></select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>الكمية</label>
+        <div class="qty">
+          <button type="button" id="qMinus" aria-label="إنقاص">−</button>
+          <output id="qVal">1</output>
+          <button type="button" id="qPlus" aria-label="زيادة">+</button>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field" id="wName">
+          <label for="fName">الاسم واللقب</label>
+          <input id="fName" autocomplete="name" placeholder="مثال: سارة بن علي">
+          <span class="msg">أدخلي اسمك من فضلك</span>
+        </div>
+        <div class="field" id="wPhone">
+          <label for="fPhone">رقم الهاتف</label>
+          <input id="fPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="05 / 06 / 07 ..." dir="ltr" style="text-align:right">
+          <span class="msg">أدخلي رقم هاتف صحيح (10 أرقام)</span>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field" id="wWilaya">
+          <label for="fWilaya">الولاية</label>
+          <select id="fWilaya"><option value="">اختاري الولاية</option></select>
+          <span class="msg">اختاري ولايتك</span>
+        </div>
+        <div class="field" id="wCommune">
+          <label for="fCommune">البلدية</label>
+          <input id="fCommune" placeholder="البلدية">
+          <span class="msg">أدخلي البلدية</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="fNote">العنوان أو ملاحظة (اختياري)</label>
+        <textarea id="fNote" rows="2" placeholder="الحي، الشارع، أو أي ملاحظة"></textarea>
+      </div>
+
+      <button class="btn btn-wa" type="submit">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 018.413 3.488 11.82 11.82 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zM6.6 20.013c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.82 9.82 0 001.51 5.26l-.999 3.648 3.978-1.607zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.095 3.2 5.076 4.487.71.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.247-.694.247-1.289.173-1.413z"/></svg>
+        تأكيد الطلب عبر واتساب
+      </button>
+      <p class="note">لا تدفعي أي شيء الآن · الدفع عند الاستلام فقط</p>
+    </form>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="sec" style="padding-top:0">
+  <div class="wrap">
+    <div class="sec-title"><h2>أسئلة شائعة</h2></div>
+    <div class="faq">
+      <details><summary>كيف يتم الدفع؟</summary><p>الدفع نقداً عند استلام الطلب، لا يُطلب منك أي دفع مسبق.</p></details>
+      <details><summary>كم تستغرق مدة التوصيل؟</summary><p>عادة من 24 إلى 72 ساعة حسب الولاية. نتصل بك لتأكيد الطلب قبل الشحن.</p></details>
+      <details><summary>كيف أختار المقاس المناسب؟</summary><p>المقاس هو طول العباية من الكتف إلى الأسفل. إذا لم تكوني متأكدة، اكتبي طولك في الملاحظة وسنساعدك.</p></details>
+      <details><summary>هل يمكن الاستبدال؟</summary><p>نعم، يمكنك استبدال المقاس أو اللون إذا كانت العباية بحالتها الأصلية. تواصلي معنا عبر واتساب.</p></details>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <a class="logo" href="index.html">زين<span style="color:var(--gold)">ور</span></a>
+  توصيل إلى 58 ولاية · الدفع عند الاستلام
+</footer>
+
+<div class="sticky" id="sticky">
+  <div class="p"><span id="stickyPrice"></span><small>الدفع عند الاستلام</small></div>
+  <a href="#order" class="btn btn-wa" style="flex:1">اطلبي الآن</a>
+</div>
+
+<script>
+  /* ================== À PERSONNALISER / للتعديل ================== */
+  const WHATSAPP_NUMBER = "213780487701";   // نفس رقم واتساب المتجر
+  const PRICE = 7900;                       // السعر الحالي (دج) — غيّريه
+  const OLD_PRICE = 9900;                   // السعر قبل التخفيض (دج) — غيّريه
+  const SIZES = ["52", "54", "56", "58", "60"]; // المقاسات المتوفرة
+  const COLORS = [
+    { id:"mauve",    name:"موف وردي", hex:"linear-gradient(135deg,#4a1e33 50%,#c79a9f 50%)", img:"assets/abaya/mauve.jpg" },
+    { id:"navy",     name:"كحلي",     hex:"#1f2a48", img:"assets/abaya/navy.jpg" },
+    { id:"green",    name:"أخضر زمردي", hex:"#4f7a63", img:"assets/abaya/green.jpg" },
+    { id:"burgundy", name:"عنابي",    hex:"#5e1426", img:"assets/abaya/burgundy.jpg" },
+    { id:"olive",    name:"زيتي ذهبي", hex:"#8a7428", img:"assets/abaya/olive.jpg" },
+  ];
+  const WILAYAS = ["أدرار","الشلف","الأغواط","أم البواقي","باتنة","بجاية","بسكرة","بشار","البليدة","البويرة","تمنراست","تبسة","تلمسان","تيارت","تيزي وزو","الجزائر","الجلفة","جيجل","سطيف","سعيدة","سكيكدة","سيدي بلعباس","عنابة","قالمة","قسنطينة","المدية","مستغانم","المسيلة","معسكر","ورقلة","وهران","البيض","إليزي","برج بوعريريج","بومرداس","الطارف","تندوف","تيسمسيلت","الوادي","خنشلة","سوق أهراس","تيبازة","ميلة","عين الدفلى","النعامة","عين تموشنت","غرداية","غليزان","تيميمون","برج باجي مختار","أولاد جلال","بني عباس","عين صالح","عين قزام","تقرت","جانت","المغير","المنيعة"];
+  /* ============================================================= */
+
+  const $ = s => document.querySelector(s);
+  const fmt = n => n.toLocaleString("fr-FR").replace(/ | /g," ") + " دج";
+  const state = { color: COLORS[0].id, size: SIZES[1], qty: 1 };
+
+  // prices
+  $("#priceNow").textContent = fmt(PRICE);
+  $("#priceOld").textContent = fmt(OLD_PRICE);
+  const pct = Math.round((1 - PRICE / OLD_PRICE) * 100);
+  $("#priceSave").textContent = "وفّري " + pct + "%";
+  $("#badge").textContent = "-" + pct + "%";
+  $("#stickyPrice").textContent = fmt(PRICE);
+
+  // build swatches, gallery, selects
+  const sw = $("#swatches"), gal = $("#gallery"), fColor = $("#fColor"), fSize = $("#fSize"), sizes = $("#sizes");
+  COLORS.forEach(c => {
+    sw.insertAdjacentHTML("beforeend", `<button type="button" class="sw" data-color="${c.id}"><i style="background:${c.hex}"></i>${c.name}</button>`);
+    gal.insertAdjacentHTML("beforeend", `<button type="button" class="g" data-color="${c.id}"><img src="${c.img}" alt="عباية مخمل ${c.name}" loading="lazy"><span>${c.name}</span></button>`);
+    fColor.insertAdjacentHTML("beforeend", `<option value="${c.id}">${c.name}</option>`);
+  });
+  SIZES.forEach(s => {
+    sizes.insertAdjacentHTML("beforeend", `<button type="button" class="sz" data-size="${s}">${s}</button>`);
+    fSize.insertAdjacentHTML("beforeend", `<option value="${s}">${s}</option>`);
+  });
+  WILAYAS.forEach((w, i) => {
+    const n = String(i + 1).padStart(2, "0");
+    $("#fWilaya").insertAdjacentHTML("beforeend", `<option value="${n} - ${w}">${n} - ${w}</option>`);
+  });
+
+  const media = $("#media"), vid = $("#vid"), toggle = $("#playToggle");
+  function showVideo(){ media.classList.remove("showing-img"); toggle.style.display = "none"; vid.play().catch(()=>{}); }
+  function showImage(){ media.classList.add("showing-img"); toggle.style.display = ""; vid.pause(); }
+  toggle.addEventListener("click", showVideo);
+  toggle.style.display = "none";
+
+  function render(fromUser){
+    const c = COLORS.find(x => x.id === state.color);
+    document.querySelectorAll("[data-color]").forEach(b => b.setAttribute("aria-pressed", b.dataset.color === state.color));
+    document.querySelectorAll("[data-size]").forEach(b => b.setAttribute("aria-pressed", b.dataset.size === state.size));
+    $("#colorName").textContent = c.name;
+    fColor.value = state.color; fSize.value = state.size;
+    $("#qVal").textContent = state.qty;
+    $("#sumImg").src = c.img;
+    $("#sumMeta").textContent = `${c.name} · مقاس ${state.size} · الكمية ${state.qty}`;
+    $("#sumTotal").textContent = fmt(PRICE * state.qty);
+    if (fromUser){ $("#mediaImg").src = c.img; showImage(); }
+  }
+  function pickColor(id, scroll){
+    state.color = id; render(true);
+    if (scroll) $("#media").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  sw.addEventListener("click", e => { const b = e.target.closest("[data-color]"); if (b) pickColor(b.dataset.color); });
+  gal.addEventListener("click", e => { const b = e.target.closest("[data-color]"); if (b) pickColor(b.dataset.color, true); });
+  sizes.addEventListener("click", e => { const b = e.target.closest("[data-size]"); if (b){ state.size = b.dataset.size; render(); } });
+  fColor.addEventListener("change", () => { state.color = fColor.value; render(true); });
+  fSize.addEventListener("change", () => { state.size = fSize.value; render(); });
+  $("#qMinus").addEventListener("click", () => { state.qty = Math.max(1, state.qty - 1); render(); });
+  $("#qPlus").addEventListener("click", () => { state.qty = Math.min(10, state.qty + 1); render(); });
+  render(false);
+
+  // validation + WhatsApp
+  function check(wrapId, ok){ $(wrapId).classList.toggle("err", !ok); return ok; }
+  $("#orderForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const name = $("#fName").value.trim();
+    const phone = $("#fPhone").value.replace(/[\s.\-]/g, "");
+    const wilaya = $("#fWilaya").value;
+    const commune = $("#fCommune").value.trim();
+    const ok = [
+      check("#wName", name.length >= 3),
+      check("#wPhone", /^(\+?213|0)(5|6|7)\d{8}$/.test(phone)),
+      check("#wWilaya", !!wilaya),
+      check("#wCommune", commune.length >= 2),
+    ].every(Boolean);
+    if (!ok){ document.querySelector(".field.err input, .field.err select")?.focus(); return; }
+
+    const c = COLORS.find(x => x.id === state.color);
+    const note = $("#fNote").value.trim();
+    const msg = [
+      "السلام عليكم زينور 👋، أريد طلب:",
+      "🧥 عباية المخمل الفاخرة",
+      `🎨 اللون: ${c.name}`,
+      `📏 المقاس: ${state.size}`,
+      `🔢 الكمية: ${state.qty}`,
+      `💵 المجموع: ${fmt(PRICE * state.qty)} (الدفع عند الاستلام)`,
+      "",
+      `👤 الاسم: ${name}`,
+      `📞 الهاتف: ${phone}`,
+      `📍 الولاية: ${wilaya}`,
+      `🏘️ البلدية: ${commune}`,
+      note ? `📝 ملاحظة: ${note}` : null,
+    ].filter(l => l !== null).join("\n");
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+  });
+  document.querySelectorAll(".field input, .field select").forEach(el =>
+    el.addEventListener("input", () => el.closest(".field").classList.remove("err")));
+
+  // sticky CTA: show after hero, hide when the form is on screen
+  const sticky = $("#sticky");
+  const heroBtn = $(".info .btn-gold"), form = $("#orderForm");
+  function upd(){
+    const pastHero = heroBtn.getBoundingClientRect().bottom < 0;
+    const f = form.getBoundingClientRect();
+    const formVisible = f.top < innerHeight * 0.85 && f.bottom > 0;
+    sticky.classList.toggle("on", pastHero && !formVisible);
+  }
+  addEventListener("scroll", upd, { passive: true });
+  addEventListener("resize", upd);
+  upd();
+</script>
+</body>
+</html>
