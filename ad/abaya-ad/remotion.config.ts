@@ -8,6 +8,6 @@
 import { Config } from "@remotion/cli/config";
 
 Config.setRspack(true);
-Config.setVideoImageFormat("jpeg");
+Config.setVideoImageFormat("png"); // lossless frame capture before H.264 encoding
 Config.setOverwriteOutput(true);
 Config.setDefaultPremountInSeconds(2);
