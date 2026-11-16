@@ -26,7 +26,7 @@ const MUSIC_FULL = 0.75;
 const MUSIC_DUCKED = 0.14;
 const RAMP = 0.3; // seconds
 
-function musicVolume(frame: number): number {
+export function musicVolume(frame: number): number {
   const t = frame / FPS;
   let duck = 0; // 0 = full, 1 = fully ducked
   for (const [s, e] of SPEECH) {
@@ -114,7 +114,7 @@ const CaptionPage: React.FC<{ page: Page; pageStart: number }> = ({ page, pageSt
 };
 
 // ---------- end card ----------
-const EndCard: React.FC = () => {
+export const EndCard: React.FC = () => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const bg = interpolate(frame, [0, 10], [0, 1], { extrapolateRight: "clamp" });
