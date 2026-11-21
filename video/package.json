@@ -3,7 +3,9 @@
   "private": true,
   "scripts": {
     "studio": "remotion studio",
-    "render": "remotion render MetaAcces ../out/Meta-Acces-Publicitaire.mp4 --codec=h264 --concurrency=2 --timeout=90000"
+    "render": "remotion render MetaAcces ../out/Meta-Acces-Publicitaire.mp4 --codec=h264 --concurrency=2 --timeout=90000",
+    "render:final": "remotion render MetaTutoFinal ../out/Meta-Tuto-Partenaire-Final.mp4 --codec=h264 --crf=20 --audio-codec=aac --concurrency=2 --timeout=90000",
+    "frames": "mkdir -p public/src-frames && ffmpeg -y -i public/Meta-Acces-Publicitaire-Pratique.mp4 -q:v 2 -start_number 0 public/src-frames/%04d.jpg"
   },
   "dependencies": {
     "@fontsource/cairo": "^5.1.0",
