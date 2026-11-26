@@ -62,7 +62,7 @@ export const WILAYAS = [
 
 export const wilayaByCode = (c) => WILAYAS.find((w) => w.code === Number(c));
 
-const stripAr = (s) => s.replace(/[ًٌٍَُِّْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+const stripAr = (s) => s.replace(/[ًٌٍَُِّْـ\u0653-\u0655\u0670]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
 export const normText = (s) => stripAr(String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''));
 
 // يلقى الولاية في نص حر (أطول تطابق أولاً)

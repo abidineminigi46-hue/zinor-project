@@ -1,4 +1,4 @@
-import { verifyHmac, guessMethod, num, httpJson, ConnectorError } from './base.js';
+import { verifyHmac, guessMethod, num, httpJson, ConnectorError, paymentKind } from './base.js';
 
 const API_VERSION = '2025-01';
 
@@ -30,6 +30,7 @@ export default {
       method: guessMethod(ship?.title, ship?.code),
       items: (o.line_items || []).map((li) => ({ sku: li.sku, name: li.title || li.name, qty: Number(li.quantity) || 1, unitPrice: num(li.price) })),
       deliveryFee: num(ship?.price), total: num(o.total_price), note: o.note || '',
+      paymentMethod: paymentKind(o.payment_gateway_names, o.gateway),
     };
   },
 

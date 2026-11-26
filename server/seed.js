@@ -1,6 +1,6 @@
 // بيانات التجربة (وهمية) — تتزاد أوتوماتيكياً كي تكون القاعدة فارغة
 import fs from 'node:fs';
-import { config } from './config.js';
+import { config, isMain } from './config.js';
 import { db, openDb } from './db.js';
 import { hashPassword, encrypt, randomToken } from './crypto.js';
 import { WILAYAS } from './data/wilayas.js';
@@ -64,7 +64,7 @@ export function seedIfEmpty({ quiet = false } = {}) {
   return true;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMain(import.meta.url)) {
   if (process.argv.includes('--reset')) for (const f of [config.dbPath, config.dbPath + '-wal', config.dbPath + '-shm']) fs.rmSync(f, { force: true });
   openDb();
   if (!seedIfEmpty()) console.log('القاعدة فيها بيانات من قبل. استعمل --reset باش تعاود.');

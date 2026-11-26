@@ -39,3 +39,10 @@ export const num = (v) => Math.round(Number(String(v ?? 0).replace(/[^\d.]/g, ''
 
 // قراءة حقل بمسار "a.b.0.c"
 export const pick = (obj, path) => String(path || '').split('.').reduce((o, k) => (o == null ? o : o[k]), obj);
+
+// طريقة الدفع: cod (الدفع عند الاستلام) | prepaid | null (ما نعرفوش)
+export function paymentKind(...vals) {
+  const t = vals.flat().filter(Boolean).join(' ').toLowerCase();
+  if (!t) return null;
+  return /cod|cash|livraison|à la livraison|a la livraison|عند الاستلام|الدفع عند|on delivery/.test(t) ? 'cod' : 'prepaid';
+}

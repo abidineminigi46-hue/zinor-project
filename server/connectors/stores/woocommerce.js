@@ -1,4 +1,4 @@
-import { verifyHmac, guessMethod, num, httpJson, ConnectorError } from './base.js';
+import { verifyHmac, guessMethod, num, httpJson, ConnectorError, paymentKind } from './base.js';
 
 const STATUS = { shipped: 'processing', delivered: 'completed', returned: 'refunded', cancelled: 'cancelled' };
 
@@ -35,6 +35,7 @@ export default {
       method: guessMethod(ship?.method_title, ship?.method_id),
       items: (o.line_items || []).map((li) => ({ sku: li.sku, name: li.name, qty: Number(li.quantity) || 1, unitPrice: num(li.price) })),
       deliveryFee: num(ship?.total), total: num(o.total), note: o.customer_note || '',
+      paymentMethod: paymentKind(o.payment_method, o.payment_method_title),
     };
   },
 

@@ -28,7 +28,26 @@ export const config = {
     effort: env('AI_EFFORT', 'low'),
   },
   pollIntervalMin: Number(env('POLL_INTERVAL_MIN', '15')),
+  calls: {
+    // n8n: الـWebhook اللي يبدا المكالمة عند خدمة الهاتف (Twilio)
+    n8nStartUrl: env('N8N_CALL_START_URL'),
+    // n8n: الـWebhook اللي Twilio يبعثلو كلام الزبون (يتحط في <Gather action>)
+    n8nTurnUrl: env('N8N_CALL_TURN_URL'),
+    // سرّ مشترك بين Zinor و n8n لتوقيع الطلبات في الاتجاهين
+    webhookSecret: env('CALLS_WEBHOOK_SECRET'),
+    speechLanguage: env('CALLS_SPEECH_LANGUAGE', 'ar-DZ'),
+    schedulerSeconds: Number(env('CALLS_SCHEDULER_SECONDS', '30')),
+  },
+  elevenlabs: { apiKey: env('ELEVENLABS_API_KEY'), model: env('ELEVENLABS_MODEL', 'eleven_multilingual_v2') },
 };
 
 export const waLive = () => Boolean(config.wa.token && config.wa.phoneNumberId);
 export const aiLive = () => Boolean(config.ai.apiKey);
+export const callsBridgeReady = () => Boolean(config.calls.n8nStartUrl && config.calls.n8nTurnUrl && config.calls.webhookSecret);
+
+// هل هاذ الملف هو اللي تشغّل مباشرة (node server/index.js)؟ — يخدم في ويندوز (C:\\...) ولينكس
+export function isMain(importMetaUrl) {
+  if (!process.argv[1]) return false;
+  const a = fileURLToPath(importMetaUrl), b = path.resolve(process.argv[1]);
+  return process.platform === 'win32' ? a.toLowerCase() === b.toLowerCase() : a === b;
+}

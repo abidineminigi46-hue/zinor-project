@@ -66,3 +66,6 @@ export function safeEqual(a, b) {
 }
 export const randomToken = (n = 24) => crypto.randomBytes(n).toString('hex');
 export const sha = (s) => crypto.createHash('sha256').update(s).digest('hex');
+
+// توقيع روابط مؤقتة (مثلاً ملفات الصوت اللي Twilio يقراهم)
+export const signValue = (value) => hmac('sha256', key(), String(value));

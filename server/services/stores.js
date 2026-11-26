@@ -9,6 +9,7 @@ import { getOrCreateConversation, saveState } from './conversations.js';
 import { sendNotification } from './whatsapp.js';
 import { orderVars } from './notifications.js';
 import { audit, logError } from './audit.js';
+import { startConfirmation } from '../calls/engine.js';
 
 export async function ingestStoreWebhook(accountId, req) {
   const account = loadAccount('store', accountId, { includeDeleted: true });
@@ -45,10 +46,10 @@ export async function importOrder(account, n) {
     source: 'store', storeAccountId: account.id, storePlatform: account.code, externalId: n.externalId, externalNumber: n.externalNumber,
     customerId: customer?.id, customerName: n.customerName, phone: n.phone, waPhone: wa, wilayaCode: w?.code ?? null,
     commune: n.commune || null, address: n.address || null, deliveryMethod: n.method, items, status: 'awaiting_confirmation',
-    notes: n.note || null,
+    notes: n.note || null, paymentMethod: n.paymentMethod ?? null,
   }, { actor: `store:${account.code}` });
   if (order.wilaya_code && order.delivery_method) recalcOrder(order.id);
-  if (wa) sendOrderConfirmation(getOrder(order.id));
+  startConfirmation(order.id); // واتساب / مكالمة / الاثنين / يدوي — حسب إعداد المصدر
   return getOrder(order.id);
 }
 

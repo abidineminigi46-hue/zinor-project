@@ -19,6 +19,12 @@ import { draftView } from '../ai/tools.js';
 import { engineName } from '../ai/agent.js';
 import { listProducts } from '../services/catalog.js';
 import { normPhone } from '../services/customers.js';
+import { cancelOrderFull } from '../services/confirm.js';
+import * as calls from '../calls/engine.js';
+import { saveIntro, listMedia, getMedia, deleteMedia, mediaPath } from '../calls/media.js';
+import { listVoices, synthesize, cloneVoice, SAMPLE_TEXT, voiceInfo } from '../calls/voices.js';
+import { callsBridgeReady } from '../config.js';
+import fs from 'node:fs';
 
 export const api = new Router();
 const admin = (req) => { if (req.user?.role !== 'admin') throw httpErr(403, 'هاذي الصفحة للمشرف برك'); };
@@ -69,6 +75,7 @@ api.get('/api/dashboard', (req, res) => {
       human: db.get('SELECT COUNT(*) n FROM conversations WHERE mode=\'human\'').n,
       returns: db.get("SELECT COUNT(*) n FROM returns WHERE status='needs_review'").n,
       failed: db.get("SELECT COUNT(*) n FROM orders WHERE status='delivery_failed'").n,
+      calls: db.get("SELECT COUNT(*) n FROM orders WHERE review_reason IS NOT NULL AND status NOT IN ('cancelled','delivered','returned')").n,
     },
     recent: listOrders({ limit: 8 }),
   });
@@ -87,6 +94,7 @@ api.get('/api/orders/:id', (req, res) => {
     items: orderItems(o.id), events: db.all('SELECT * FROM order_events WHERE order_id=? ORDER BY id', o.id), shipments,
     returns: db.all('SELECT * FROM returns WHERE order_id=? ORDER BY id', o.id), validation: validateOrder(o),
     conversation: conv ? { id: conv.id, mode: conv.mode, messages: listMessages(conv.id, 60) } : null,
+    calls: calls.orderCallInfo(o.id),
   });
 });
 api.post('/api/orders', (req, res) => {
@@ -112,11 +120,12 @@ api.put('/api/orders/:id', (req, res) => {
   send(res, 200, { order: n });
 });
 api.post('/api/orders/:id/confirm', (req, res) => {
-  const o = getOrder(req.params.id);
-  if (!['new', 'awaiting_confirmation', 'needs_review'].includes(o?.status)) throw httpErr(409, 'ما نقدروش نأكدو هاذ الطلب');
-  setOrderStatus(o.id, 'confirmed', { note: 'تأكيد يدوي من الموظف', actor: req.user.name, extra: { confirmed_at: now(), confirmed_via: 'staff' } });
-  audit('order.confirm.staff', { user: req.user, entity: 'orders', entityId: o.id });
-  send(res, 200, { order: getOrder(o.id) });
+  const r = db.run("UPDATE orders SET status='confirmed', confirmed_at=?, confirmed_via='staff', review_reason=NULL, updated_at=? WHERE id=? AND status IN ('new','awaiting_confirmation','needs_review')", now(), now(), Number(req.params.id));
+  if (!r.changes) throw httpErr(409, 'ما نقدروش نأكدو هاذ الطلب');
+  db.insert('order_events', { order_id: Number(req.params.id), status: 'confirmed', note: 'تأكيد يدوي من الموظف', actor: req.user.name });
+  calls.cancelPendingCalls(Number(req.params.id), 'تأكيد يدوي من الموظف');
+  audit('order.confirm.staff', { user: req.user, entity: 'orders', entityId: Number(req.params.id) });
+  send(res, 200, { order: getOrder(req.params.id) });
 });
 const dispatchHandler = async (req, res) => {
   const r = await dispatchOrder(Number(req.params.id), { user: req.user, actor: req.user.name, carrierAccountId: int(req.body.carrier_account_id), force: !!req.body.force && req.user.role === 'admin' });
@@ -125,12 +134,14 @@ const dispatchHandler = async (req, res) => {
 api.post('/api/orders/:id/dispatch', dispatchHandler);
 api.post('/api/orders/:id/retry', dispatchHandler);
 api.post('/api/orders/:id/cancel', (req, res) => {
-  const o = getOrder(req.params.id);
-  if (!o || ['shipped', 'out_for_delivery', 'delivered', 'returning', 'returned'].includes(o.status)) throw httpErr(409, 'ما نقدروش نلغيو طلب تبعث — لازم روتور');
-  setOrderStatus(o.id, 'cancelled', { note: req.body.reason || 'إلغاء من الموظف', actor: req.user.name });
-  audit('order.cancel', { user: req.user, entity: 'orders', entityId: o.id });
-  send(res, 200, { order: getOrder(o.id) });
+  const r = cancelOrderFull(Number(req.params.id), { note: req.body.reason || 'إلغاء من الموظف', actor: req.user.name, user: req.user });
+  if (!r.ok) throw httpErr(409, r.shipped ? 'ما نقدروش نلغيو طلب تبعث — لازم روتور' : r.error);
+  send(res, 200, { order: getOrder(req.params.id) });
 });
+// ───── المكالمات في صفحة الطلب ─────
+api.post('/api/orders/:id/call-now', async (req, res) => { const c = await calls.callNow(Number(req.params.id), req.user); send(res, 200, { call: c, info: calls.orderCallInfo(Number(req.params.id)) }); });
+api.post('/api/orders/:id/stop-calls', (req, res) => { const n = calls.stopAttempts(Number(req.params.id), req.user); send(res, 200, { cancelled: n, info: calls.orderCallInfo(Number(req.params.id)) }); });
+api.post('/api/orders/:id/handoff', (req, res) => { calls.handoffOrder(Number(req.params.id), req.user); send(res, 200, { info: calls.orderCallInfo(Number(req.params.id)) }); });
 api.post('/api/orders/:id/send-confirmation', (req, res) => {
   const o = getOrder(req.params.id);
   if (!o?.wa_phone) throw httpErr(400, 'ما كانش رقم واتساب');
@@ -275,6 +286,7 @@ api.put('/api/settings/:key', (req, res) => {
   admin(req);
   if (!(req.params.key in DEFAULTS)) throw httpErr(404, 'إعداد غير معروف');
   setSetting(req.params.key, req.body);
+  if (req.params.key === 'calls') calls.reconcileTasks(); // إذا تطفات المكالمات لمصدر: نلغيو المحاولات اللي ما بداتش
   audit('settings.update', { user: req.user, entity: 'settings', details: { key: req.params.key } });
   send(res, 200, { value: getSetting(req.params.key) });
 });
@@ -314,6 +326,8 @@ api.post('/api/sim/whatsapp', async (req, res) => {
   const msg = b.button_id
     ? { from, id, timestamp: String(Math.floor(Date.now() / 1000)), type: 'interactive', interactive: { type: 'button_reply', button_reply: { id: b.button_id, title: b.title || b.button_id } } }
     : { from, id, timestamp: String(Math.floor(Date.now() / 1000)), type: 'text', text: { body: String(b.text || '') } };
+  // محاكاة رسالة جاية من إعلان Meta (Click-to-WhatsApp)
+  if (b.referral) msg.referral = { source_type: 'ad', source_id: String(b.referral.source_id || 'AD-TEST'), headline: b.referral.headline || 'إعلان تجريبي', source_url: 'https://fb.me/ad' };
   const results = await processWhatsAppWebhook({ object: 'whatsapp_business_account', entry: [{ changes: [{ field: 'messages', value: { contacts: [{ wa_id: from, profile: { name: b.name || 'زبون تجريبي' } }], messages: [msg] } }] }] });
   const conv = conversationByPhone(from);
   send(res, 200, { result: results[0] || null, messages: conv ? listMessages(conv.id, 80) : [] });
@@ -345,6 +359,96 @@ function samplePayload(platform, b) {
   const name = b.customer_name || 'أمين بن علي', phone = b.phone || '0661234567', commune = b.commune || 'Bir El Djir', address = b.address || 'حي السلام عمارة 12';
   const method = b.delivery_method || 'home';
   if (platform === 'shopify') return { id: Number(ext), name: `#${ext.slice(-4)}`, total_price: String(p.price * qty), shipping_address: { first_name: name.split(' ')[0], last_name: name.split(' ').slice(1).join(' '), phone, address1: address, city: commune, province: w.fr }, line_items: [{ sku: p.sku, title: p.name, quantity: qty, price: String(p.price) }], shipping_lines: [{ title: method === 'desk' ? 'Stop desk' : 'Livraison à domicile', price: '0' }] };
-  if (platform === 'woocommerce') return { id: Number(ext), number: ext.slice(-5), total: String(p.price * qty), billing: { first_name: name.split(' ')[0], last_name: name.split(' ').slice(1).join(' '), phone, address_1: address, city: commune, state: `DZ-${String(w.code).padStart(2, '0')}` }, shipping: {}, line_items: [{ sku: p.sku, name: p.name, quantity: qty, price: p.price }], shipping_lines: [{ method_title: method === 'desk' ? 'Stop desk' : 'Domicile', total: '0' }] };
+  if (platform === 'woocommerce') return { id: Number(ext), number: ext.slice(-5), total: String(p.price * qty), billing: { first_name: name.split(' ')[0], last_name: name.split(' ').slice(1).join(' '), phone, address_1: address, city: commune, state: `DZ-${String(w.code).padStart(2, '0')}` }, shipping: {}, line_items: [{ sku: p.sku, name: p.name, quantity: qty, price: p.price }], shipping_lines: [{ method_title: method === 'desk' ? 'Stop desk' : 'Domicile', total: '0' }], payment_method: b.payment_method || 'cod', payment_method_title: b.payment_method === 'bacs' ? 'Virement' : 'Paiement à la livraison' };
   return { id: ext, number: ext.slice(-5), customer: { name, phone }, wilaya: w.fr, commune, address, delivery_method: method, items: [{ sku: p.sku, name: p.name, qty, price: p.price }], shipping_fee: 0, total: p.price * qty };
 }
+
+// ───── واتساب والمكالمات ─────
+api.get('/api/calls/config', async (req, res) => {
+  send(res, 200, {
+    settings: getSetting('calls'), ai: getSetting('ai'), modes: calls.MODES, channels: calls.CHANNELS,
+    bridge: { ready: callsBridgeReady(), startUrl: !!config.calls.n8nStartUrl, turnUrl: !!config.calls.n8nTurnUrl, secret: !!config.calls.webhookSecret, speechLanguage: config.calls.speechLanguage },
+    voices: await listVoices(), media: isAdmin(req) ? listMedia() : [], sampleText: SAMPLE_TEXT,
+    webhooks: { turn: `${config.publicUrl}/webhooks/calls/turn`, events: `${config.publicUrl}/webhooks/calls/events` },
+  });
+});
+const isAdmin = (req) => req.user?.role === 'admin';
+api.get('/api/calls', (req, res) => {
+  const review = db.all(`SELECT id, number, customer_name, phone, status, review_reason, confirm_mode, source_channel, updated_at FROM orders
+    WHERE review_reason IS NOT NULL AND status NOT IN ('cancelled','delivered','returned') ORDER BY updated_at DESC LIMIT 100`);
+  const scheduled = db.all(`SELECT t.*, o.number, o.customer_name, o.phone FROM call_tasks t JOIN orders o ON o.id=t.order_id WHERE t.status IN ('scheduled','dialing') ORDER BY t.scheduled_for LIMIT 100`);
+  const recent = db.all(`SELECT c.id, c.direction, c.phone, c.status, c.outcome, c.error, c.real, c.provider, c.created_at, c.order_id, o.number FROM calls c LEFT JOIN orders o ON o.id=c.order_id ORDER BY c.id DESC LIMIT 60`);
+  send(res, 200, { review, scheduled, recent });
+});
+api.get('/api/calls/:id', (req, res) => { const c = calls.getCall(Number(req.params.id)); if (!c) throw httpErr(404, 'المكالمة غير موجودة'); send(res, 200, { call: c }); });
+api.post('/api/calls/test', async (req, res) => {
+  admin(req);
+  const s = getSetting('calls');
+  if (!s.owner_phone) throw httpErr(400, 'حط رقمك في الإعدادات أولاً');
+  send(res, 200, { call: await calls.testCall(s.owner_phone) });
+});
+
+// تسجيلات المقدّمة — رفع وسماع للمشرف برك
+api.get('/api/media', (req, res) => { admin(req); send(res, 200, { media: listMedia() }); });
+api.post('/api/media', (req, res) => { admin(req); const m = saveIntro(req.body, req.user); audit('media.upload', { user: req.user, entity: 'media', entityId: m.id, details: { name: m.name, size: m.size } }); send(res, 201, { media: { id: m.id, name: m.name, mime: m.mime, size: m.size } }); });
+api.del('/api/media/:id', (req, res) => {
+  admin(req);
+  const s = getSetting('calls');
+  const id = Number(req.params.id);
+  if ([s.intros.outbound_media_id, s.intros.inbound_media_id].includes(id)) throw httpErr(409, 'التسجيل مستعمل — بدّلو في الإعدادات أولاً');
+  deleteMedia(id); audit('media.delete', { user: req.user, entity: 'media', entityId: id }); send(res, 200, { ok: true });
+});
+api.get('/api/media/:id/audio', (req, res) => {
+  admin(req);
+  const m = getMedia(Number(req.params.id));
+  if (!m) throw httpErr(404, 'غير موجود');
+  res.writeHead(200, { 'Content-Type': m.mime, 'Content-Length': m.size, 'Cache-Control': 'private, max-age=300' });
+  fs.createReadStream(mediaPath(m.file)).pipe(res);
+});
+
+// الأصوات: القائمة + عيّنة بالدارجة + الاستنساخ
+api.get('/api/voices', async (req, res) => send(res, 200, await listVoices()));
+api.get('/api/voices/sample', async (req, res) => {
+  admin(req);
+  const v = voiceInfo(req.query.voice);
+  const text = String(req.query.text || SAMPLE_TEXT).slice(0, 300);
+  if (v.provider !== 'elevenlabs') return send(res, 200, { browser: true, gender: v.gender, text, note: v.provider === 'twilio' ? 'العيّنة تقريبية من المتصفح — الصوت الحقيقي يتسمع في أول مكالمة تجريبية' : 'صوت المحاكاة' });
+  const rel = await synthesize(req.query.voice, text);
+  const file = mediaPath(rel);
+  res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Content-Length': fs.statSync(file).size });
+  fs.createReadStream(file).pipe(res);
+});
+api.post('/api/voices/clone', async (req, res) => {
+  admin(req);
+  const b = req.body;
+  if (!b.consent || !String(b.owner || '').trim()) throw httpErr(400, 'لازم موافقة صاحب الصوت واسمو');
+  const files = (b.media_ids || []).map((id) => getMedia(Number(id))).filter(Boolean).map((m) => ({ path: mediaPath(m.file), mime: m.mime }));
+  if (!files.length) throw httpErr(400, 'اختار تسجيل واحد على الأقل');
+  const voiceId = await cloneVoice({ name: b.name || `Zinor — ${b.owner}`, files });
+  const s = getSetting('calls');
+  setSetting('calls', { ...s, voice: { ...s.voice, clone_voice_id: voiceId, clone_owner: b.owner, clone_consent: true } });
+  audit('voice.clone', { user: req.user, details: { owner: b.owner, voiceId } });
+  send(res, 200, { voice_id: voiceId });
+});
+
+// محاكي المكالمات (نفس المسار تاع n8n/Twilio بلا ما نخلّصو)
+api.get('/api/sim/calls', (req, res) => send(res, 200, {
+  active: db.all("SELECT c.id, c.direction, c.phone, c.status, c.order_id, c.created_at, o.number, o.customer_name FROM calls c LEFT JOIN orders o ON o.id=c.order_id WHERE c.real=0 AND c.status IN ('queued','ringing','in_progress') ORDER BY c.id DESC"),
+}));
+api.post('/api/sim/calls/inbound', (req, res) => { if (!req.body.from) throw httpErr(400, 'رقم المتصل ناقص'); send(res, 200, calls.inboundCall(req.body.from)); });
+api.post('/api/sim/calls/:id/event', async (req, res) => {
+  const c = calls.getCall(Number(req.params.id));
+  if (!c || c.real) throw httpErr(400, 'المحاكاة غير للمكالمات التجريبية');
+  const reply = await calls.callEvent(c.id, req.body.type);
+  send(res, 200, { reply, call: calls.getCall(c.id) });
+});
+api.post('/api/sim/calls/:id/say', async (req, res) => {
+  const c = calls.getCall(Number(req.params.id));
+  if (!c || c.real) throw httpErr(400, 'المحاكاة غير للمكالمات التجريبية');
+  const reply = await calls.callTurn(c.id, String(req.body.text || ''));
+  send(res, 200, { reply, call: calls.getCall(c.id) });
+});
+api.post('/api/sim/calls/run-due', async (req, res) => {
+  const at = req.body.now ? new Date(req.body.now) : new Date();
+  send(res, 200, { dialed: await calls.runDue(at) });
+});

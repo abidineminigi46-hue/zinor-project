@@ -1,18 +1,19 @@
 import { state, esc, $, $$, api, act, toast, modal, dzd, fmtDate, orderBadge, shipBadge, retBadge, sourceBadge, carrierName, wilayaName, wilayaOptions, options, isAdmin, icon } from './core.js';
 import { inboxPage, shippingPage, simulatorPage } from './pages-ops.js';
 import { productsPage, ratesPage, integrationsPage, settingsPage, usersPage, auditPage } from './pages-admin.js';
+import { callsSettingsPage, callSimPage, orderCallsCard } from './pages-calls.js';
 
 const NAV = [
-  ['الرئيسية', '#/', 'home'], ['الطلبات', '#/orders', 'orders'], ['صندوق واتساب', '#/inbox', 'chat', 'human'], ['الشحن والروتور', '#/shipping', 'truck', 'dispatch'],
+  ['الرئيسية', '#/', 'home'], ['الطلبات', '#/orders', 'orders'], ['صندوق واتساب', '#/inbox', 'chat', 'human'], ['الشحن والروتور', '#/shipping', 'truck', 'dispatch'], ['واتساب والمكالمات', '#/calls', 'call', 'calls'],
   ['sec', 'الكتالوج'], ['المنتجات', '#/products', 'box'], ['أسعار التوصيل', '#/rates', 'map'],
   ['sec', 'الربط', true], ['المتاجر والربط', '#/stores', 'store', null, true], ['شركات التوصيل', '#/carriers', 'plug', null, true],
   ['sec', 'الإدارة'], ['الإعدادات', '#/settings', 'gear', null, true], ['المستخدمين', '#/users', 'users', null, true], ['سجلّ الإجراءات', '#/audit', 'log', null, true],
-  ['sec', 'التجربة'], ['محاكي واتساب', '#/simulator', 'phone'],
+  ['sec', 'التجربة'], ['محاكي واتساب', '#/simulator', 'phone'], ['محاكي المكالمات', '#/call-sim', 'call'],
 ];
 const ROUTES = [
   [/^#\/?$/, homePage], [/^#\/orders$/, ordersPage], [/^#\/orders\/(\d+)$/, orderPage], [/^#\/inbox(?:\/(\d+))?$/, inboxPage],
   [/^#\/shipping$/, shippingPage], [/^#\/products$/, productsPage], [/^#\/rates$/, ratesPage], [/^#\/stores$/, () => integrationsPage('store')],
-  [/^#\/carriers$/, () => integrationsPage('carrier')], [/^#\/settings$/, settingsPage], [/^#\/users$/, usersPage], [/^#\/audit$/, auditPage], [/^#\/simulator$/, simulatorPage],
+  [/^#\/carriers$/, () => integrationsPage('carrier')], [/^#\/settings$/, settingsPage], [/^#\/users$/, usersPage], [/^#\/audit$/, auditPage], [/^#\/simulator$/, simulatorPage], [/^#\/calls$/, callsSettingsPage], [/^#\/call-sim$/, callSimPage],
 ];
 let attention = {};
 export let cleanup = null;
@@ -220,6 +221,7 @@ async function orderPage(main, id) {
         ${d.returns.length ? `<div class="card"><h2>الروتور</h2>${d.returns.map((r) => `<div class="row" style="margin-top:8px">${retBadge(r.status)}<b>${r.type === 'rto' ? 'طرد راجع (ما تسلّمش)' : 'روتور من الزبون'}</b><span class="muted">${esc(r.reason || '')}</span>${r.pickup_tracking ? `<span class="mono small">${esc(r.pickup_tracking)}</span>` : ''}</div>`).join('')}</div>` : ''}
       </div>
       <div class="stack">
+        ${d.calls ? orderCallsCard(d.calls, o.id) : ''}
         <div class="card"><h2 style="margin-bottom:12px">تاريخ الحالات</h2><ul class="timeline">${d.events.map((e) => `<li>${orderBadge(e.status)}<div class="small" style="margin-top:3px">${esc(e.note || '')}</div><div class="muted small">${fmtDate(e.created_at)} · ${esc(e.actor || '')}</div></li>`).join('')}</ul></div>
         <div class="card"><div class="card-head"><h2>المحادثة</h2>${d.conversation ? `<a href="#/inbox/${d.conversation.id}">فتح ←</a>` : ''}</div>
           ${d.conversation ? `<div class="stack" id="convbox" style="max-height:420px;overflow:auto;background:#efeae0;border-radius:10px;padding:10px">${d.conversation.messages.slice(-14).map(msgHtml).join('')}</div>` : '<div class="muted">ما كانش محادثة</div>'}</div>
@@ -245,6 +247,12 @@ async function orderPage(main, id) {
     reload();
   });
   bindShipmentActions(main, reload);
+  $$('[data-callact]', main).forEach((b) => b.onclick = async () => {
+    b.disabled = true;
+    const labels = { 'call-now': 'بدات المكالمة — شوف محاكي المكالمات إذا الوضع تجريبي', 'stop-calls': 'توقفت المحاولات', handoff: 'تحوّل الطلب ليك' };
+    await act(() => api('POST', `/api/orders/${id}/${b.dataset.callact}`), labels[b.dataset.callact]).finally(() => { b.disabled = false; });
+    reload();
+  });
 }
 
 export function shipmentBlock(s) {

@@ -35,6 +35,29 @@ export const DEFAULTS = {
       text: 'كوموندك رقم {order} رجعت للمخزن. إذا حبيت نعاودو نبعثوها ردّ على هاذ المساج.',
     },
   },
+  // ───── واتساب والمكالمات ─────
+  calls: {
+    real_calls_enabled: false,        // المكالمات الحقيقية مطفية افتراضياً
+    test_only_owner: true,            // وضع أول تجربة: الاتصال الحقيقي غير لرقم صاحب المتجر
+    owner_phone: '',
+    outbound_enabled: true,           // المكالمات الصادرة
+    inbound_enabled: true,            // المكالمات الواردة (الزبون يرجع يعيّط)
+    // طريقة التأكيد لكل مصدر: whatsapp | call | whatsapp_call | manual
+    modes: { woocommerce: 'whatsapp_call', store: 'whatsapp', whatsapp_chat: 'whatsapp', whatsapp_campaign: 'whatsapp', manual: 'manual', default: 'whatsapp' },
+    campaign_overrides: [],           // [{ source_id, label, mode }] حسب معرّف إعلان Meta (referral.source_id)
+    combined_strategy: 'delayed',     // immediate | delayed (في وضع واتساب + مكالمة)
+    delay_minutes: 60,
+    only_cod: true,
+    timezone: 'Africa/Algiers',
+    windows: [{ start: '10:00', end: '12:00' }, { start: '14:00', end: '16:00' }, { start: '18:00', end: '20:00' }],
+    max_attempts_per_day: 3,
+    scripts: {
+      outbound_opening: 'سلام، معاك متجر Zinor. عيّطنالك على الكوموند اللي درتها. عندك دقيقة باش نأكدوها؟',
+      inbound_opening: 'سلام، معاك متجر Zinor. كيفاش نقدر نعاونك في الكوموند تاعك؟',
+    },
+    voice: { outbound: 'sim-female', inbound: 'sim-female', same_voice: false, clone_voice_id: '', clone_owner: '', clone_consent: false },
+    intros: { outbound_media_id: null, inbound_media_id: null },
+  },
   returns: {
     window_days: 7,
     auto_accept_reasons: ['defective', 'wrong_item'],

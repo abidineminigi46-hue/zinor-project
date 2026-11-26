@@ -1,0 +1,358 @@
+{
+  "name": "Zinor — المكالمات (Twilio)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "zinor-call-start",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Zinor: طلب مكالمة",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "zinor-call-start"
+    },
+    {
+      "parameters": {
+        "jsCode": "// يتحقق من توقيع Zinor (HMAC-SHA256 على \"timestamp.body\") — يلزم NODE_FUNCTION_ALLOW_BUILTIN=crypto\nconst crypto = require('crypto');\nconst item = $input.first().json;\nconst h = item.headers || {};\nconst body = JSON.stringify(item.body);\nconst ts = Number(h['x-zinor-timestamp']);\nif (!ts || Math.abs(Date.now() / 1000 - ts) > 300) throw new Error('Zinor: timestamp قديم ولا ناقص');\nconst expected = crypto.createHmac('sha256', $env.CALLS_WEBHOOK_SECRET).update(`${ts}.${body}`).digest('hex');\nif (h['x-zinor-signature'] !== expected) throw new Error('Zinor: توقيع غير صالح');\nconst b = item.body;\nconst auth = 'Basic ' + Buffer.from(`${$env.TWILIO_ACCOUNT_SID}:${$env.TWILIO_AUTH_TOKEN}`).toString('base64');\nconst statusUrl = `${$env.N8N_PUBLIC_URL}/webhook/zinor-call-status?call_id=${encodeURIComponent(b.call_id)}`;\nreturn [{ json: { to: b.to, turn_url: b.turn_url, status_url: statusUrl, auth, machine: b.machine_detection ? 'Enable' : '' } }];"
+      },
+      "name": "تحقق من توقيع Zinor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.twilio.com/2010-04-01/Accounts/{{ $env.TWILIO_ACCOUNT_SID }}/Calls.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.auth }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "To",
+              "value": "={{ $json.to }}"
+            },
+            {
+              "name": "From",
+              "value": "={{ $env.TWILIO_FROM_NUMBER }}"
+            },
+            {
+              "name": "Url",
+              "value": "={{ $json.turn_url }}"
+            },
+            {
+              "name": "Method",
+              "value": "POST"
+            },
+            {
+              "name": "StatusCallback",
+              "value": "={{ $json.status_url }}"
+            },
+            {
+              "name": "StatusCallbackMethod",
+              "value": "POST"
+            },
+            {
+              "name": "MachineDetection",
+              "value": "={{ $json.machine }}"
+            },
+            {
+              "name": "Timeout",
+              "value": "25"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Twilio: إنشاء المكالمة",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { provider_call_id: $json.sid, status: $json.status } }}",
+        "options": {}
+      },
+      "name": "ردّ على Zinor",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "zinor-turn",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Twilio: كلام الزبون",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "zinor-turn"
+    },
+    {
+      "parameters": {
+        "jsCode": "// يتحقق من توقيع Twilio (X-Twilio-Signature) ثم يبني طلب موقّع لـ Zinor\nconst crypto = require('crypto');\nconst item = $input.first().json;\nconst h = item.headers || {};\nconst q = item.query || {};\nconst params = item.body || {};\nconst qs = new URLSearchParams(q).toString();\nconst url = `${$env.N8N_PUBLIC_URL}/webhook/zinor-turn${qs ? '?' + qs : ''}`;\nconst data = url + Object.keys(params).sort().map((k) => k + params[k]).join('');\nconst expected = crypto.createHmac('sha1', $env.TWILIO_AUTH_TOKEN).update(Buffer.from(data, 'utf-8')).digest('base64');\nif (h['x-twilio-signature'] !== expected) throw new Error('Twilio: توقيع غير صالح (تأكد من N8N_PUBLIC_URL)');\nconst payload = {\n  call_id: q.call_id ? Number(q.call_id) : null,\n  provider_call_id: params.CallSid,\n  from: params.From, to: params.To,\n  direction: q.direction === 'inbound' || params.Direction === 'inbound' ? 'inbound' : 'outbound',\n  speech: params.SpeechResult || '', confidence: params.Confidence || null,\n  answered_by: params.AnsweredBy || null, silence: q.silence === '1' && !params.SpeechResult,\n};\nconst body = JSON.stringify(payload);\nconst ts = Math.floor(Date.now() / 1000);\nconst sig = crypto.createHmac('sha256', $env.CALLS_WEBHOOK_SECRET).update(`${ts}.${body}`).digest('hex');\nreturn [{ json: { body, ts: String(ts), sig } }];"
+      },
+      "name": "تحقق Twilio + توقيع لـ Zinor (turn)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ZINOR_URL }}/webhooks/calls/turn",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Zinor-Timestamp",
+              "value": "={{ $json.ts }}"
+            },
+            {
+              "name": "X-Zinor-Signature",
+              "value": "={{ $json.sig }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "name": "Zinor: الحوار",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.twiml }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/xml"
+              }
+            ]
+          }
+        }
+      },
+      "name": "TwiML لـ Twilio",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "zinor-call-status",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "name": "Twilio: حالة المكالمة",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        600
+      ],
+      "webhookId": "zinor-call-status"
+    },
+    {
+      "parameters": {
+        "jsCode": "// يتحقق من توقيع Twilio (X-Twilio-Signature) ثم يبني طلب موقّع لـ Zinor\nconst crypto = require('crypto');\nconst item = $input.first().json;\nconst h = item.headers || {};\nconst q = item.query || {};\nconst params = item.body || {};\nconst qs = new URLSearchParams(q).toString();\nconst url = `${$env.N8N_PUBLIC_URL}/webhook/zinor-call-status${qs ? '?' + qs : ''}`;\nconst data = url + Object.keys(params).sort().map((k) => k + params[k]).join('');\nconst expected = crypto.createHmac('sha1', $env.TWILIO_AUTH_TOKEN).update(Buffer.from(data, 'utf-8')).digest('base64');\nif (h['x-twilio-signature'] !== expected) throw new Error('Twilio: توقيع غير صالح (تأكد من N8N_PUBLIC_URL)');\nconst payload = {\n  call_id: q.call_id ? Number(q.call_id) : null, provider_call_id: params.CallSid,\n  status: params.CallStatus, answered_by: params.AnsweredBy || null, duration: params.CallDuration || null,\n  error_code: params.ErrorCode || null,\n};\nconst body = JSON.stringify(payload);\nconst ts = Math.floor(Date.now() / 1000);\nconst sig = crypto.createHmac('sha256', $env.CALLS_WEBHOOK_SECRET).update(`${ts}.${body}`).digest('hex');\nreturn [{ json: { body, ts: String(ts), sig } }];"
+      },
+      "name": "تحقق Twilio + توقيع لـ Zinor (status)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ZINOR_URL }}/webhooks/calls/events",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Zinor-Timestamp",
+              "value": "={{ $json.ts }}"
+            },
+            {
+              "name": "X-Zinor-Signature",
+              "value": "={{ $json.sig }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.body }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "name": "Zinor: نتيجة المكالمة",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        600
+      ]
+    }
+  ],
+  "connections": {
+    "Zinor: طلب مكالمة": {
+      "main": [
+        [
+          {
+            "node": "تحقق من توقيع Zinor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "تحقق من توقيع Zinor": {
+      "main": [
+        [
+          {
+            "node": "Twilio: إنشاء المكالمة",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twilio: إنشاء المكالمة": {
+      "main": [
+        [
+          {
+            "node": "ردّ على Zinor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twilio: كلام الزبون": {
+      "main": [
+        [
+          {
+            "node": "تحقق Twilio + توقيع لـ Zinor (turn)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "تحقق Twilio + توقيع لـ Zinor (turn)": {
+      "main": [
+        [
+          {
+            "node": "Zinor: الحوار",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Zinor: الحوار": {
+      "main": [
+        [
+          {
+            "node": "TwiML لـ Twilio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Twilio: حالة المكالمة": {
+      "main": [
+        [
+          {
+            "node": "تحقق Twilio + توقيع لـ Zinor (status)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "تحقق Twilio + توقيع لـ Zinor (status)": {
+      "main": [
+        [
+          {
+            "node": "Zinor: نتيجة المكالمة",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Zinor يسيّر الجدولة والحوار؛ n8n يربط Twilio. المتغيّرات: CALLS_WEBHOOK_SECRET, ZINOR_URL, N8N_PUBLIC_URL, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER, NODE_FUNCTION_ALLOW_BUILTIN=crypto"
+  }
+}

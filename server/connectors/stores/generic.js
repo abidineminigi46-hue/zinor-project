@@ -4,7 +4,7 @@
 //   items:[{sku,name,qty,price}], shipping_fee, total, note }
 // التوقيع: رأس X-Zinor-Signature = hex(HMAC-SHA256(body, webhook_secret))
 // إذا المنصّة تبعث صيغة أخرى، حدّد "خريطة الحقول" (field_map) في إعدادات الحساب.
-import { verifyHmac, guessMethod, num, pick } from './base.js';
+import { verifyHmac, guessMethod, num, pick, paymentKind } from './base.js';
 
 const DEFAULT_MAP = {
   externalId: 'id', externalNumber: 'number', customerName: 'customer.name', phone: 'customer.phone',
@@ -23,6 +23,7 @@ export function genericParse(body, map = {}) {
     method: ['home', 'desk'].includes(pick(body, m.method)) ? pick(body, m.method) : guessMethod(pick(body, m.method)),
     items: items.map((it) => ({ sku: pick(it, m.itemSku), name: pick(it, m.itemName) || pick(it, m.itemSku), qty: Number(pick(it, m.itemQty)) || 1, unitPrice: num(pick(it, m.itemPrice)) })),
     deliveryFee: num(pick(body, m.deliveryFee)), total: num(pick(body, m.total)), note: pick(body, m.note) || '',
+    paymentMethod: paymentKind(pick(body, m.paymentMethod || 'payment_method')),
   };
 }
 

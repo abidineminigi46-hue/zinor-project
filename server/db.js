@@ -112,6 +112,27 @@ CREATE TABLE IF NOT EXISTS audit_log(
   entity TEXT, entity_id INTEGER, details TEXT, retryable INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')));
 
+-- محاولات الاتصال المبرمجة (Zinor هو اللي يسيّر الجدولة)
+CREATE TABLE IF NOT EXISTS call_tasks(
+  id INTEGER PRIMARY KEY, order_id INTEGER NOT NULL, kind TEXT NOT NULL DEFAULT 'auto' CHECK(kind IN ('auto','callback','manual')),
+  status TEXT NOT NULL DEFAULT 'scheduled' CHECK(status IN ('scheduled','dialing','done','cancelled')),
+  scheduled_for TEXT NOT NULL, day TEXT, window_index INTEGER, attempt_no INTEGER NOT NULL DEFAULT 1,
+  call_id INTEGER, result TEXT, reason TEXT, error TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')));
+CREATE INDEX IF NOT EXISTS idx_call_tasks_due ON call_tasks(status, scheduled_for);
+
+-- المكالمات (صادرة/واردة) + نص الحوار + النتيجة
+CREATE TABLE IF NOT EXISTS calls(
+  id INTEGER PRIMARY KEY, direction TEXT NOT NULL CHECK(direction IN ('out','in')), order_id INTEGER, task_id INTEGER,
+  phone TEXT NOT NULL, provider TEXT NOT NULL, provider_call_id TEXT UNIQUE, real INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'queued', outcome TEXT, state TEXT NOT NULL DEFAULT '{}', transcript TEXT NOT NULL DEFAULT '[]',
+  error TEXT, started_at TEXT, ended_at TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')));
+
+-- تسجيلات المقدّمة المرفوعة من اللوحة
+CREATE TABLE IF NOT EXISTS media(
+  id INTEGER PRIMARY KEY, kind TEXT NOT NULL DEFAULT 'intro', name TEXT NOT NULL, mime TEXT NOT NULL, file TEXT NOT NULL,
+  size INTEGER NOT NULL, uploaded_by INTEGER, created_at TEXT NOT NULL DEFAULT (datetime('now')));
+
 -- "شركة توصيل" تجريبية تحاكي API حقيقية (للتجربة بلا مفاتيح)
 CREATE TABLE IF NOT EXISTS sim_parcels(
   id INTEGER PRIMARY KEY, carrier_code TEXT NOT NULL, account_id INTEGER NOT NULL, reference TEXT NOT NULL,
@@ -125,7 +146,22 @@ class DB {
     this.raw = new DatabaseSync(file);
     this.raw.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;');
     this.raw.exec(SCHEMA);
+    this.migrate();
     this.depth = 0;
+  }
+  // ترقية قاعدة بيانات قديمة بلا ما تضيع البيانات
+  migrate() {
+    const add = (table, col, def) => {
+      const cols = this.raw.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+      if (!cols.includes(col)) this.raw.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
+    };
+    add('orders', 'source_channel', 'TEXT');          // store | woocommerce | whatsapp_chat | whatsapp_campaign | manual
+    add('orders', 'campaign_id', 'TEXT');
+    add('orders', 'payment_method', 'TEXT');          // cod | prepaid | null
+    add('orders', 'confirm_mode', 'TEXT');            // whatsapp | call | whatsapp_call | manual
+    add('orders', 'do_not_call', 'INTEGER NOT NULL DEFAULT 0');
+    add('orders', 'assigned_user_id', 'INTEGER');
+    add('orders', 'review_reason', 'TEXT');
   }
   run(sql, ...p) { return this.raw.prepare(sql).run(...p); }
   get(sql, ...p) { const r = this.raw.prepare(sql).get(...p); return r ? { ...r } : undefined; }

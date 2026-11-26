@@ -176,3 +176,22 @@ tr.click{cursor:pointer} tr.click:hover td{background:#fbfaf6}
 .phone .screen{border-radius:26px;overflow:hidden;display:flex;flex-direction:column;height:640px;background:#efeae0}
 .phone .bar-top{background:#0b5e3e;color:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px}
 @media (max-width:900px){.sim{grid-template-columns:1fr}.phone .screen{height:560px}}
+
+/* واتساب والمكالمات */
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{flex:1 1 auto;min-width:96px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 10px;font-weight:600;font-size:13px;cursor:pointer}
+.seg button.on{background:var(--brand-soft);border-color:var(--brand);color:#0b7a4c}
+.calls-form{max-width:760px}
+.calls-form .card h2{font-size:15px}
+.win input[type=time]{flex:1;min-width:0}
+.savebar{position:sticky;bottom:0;padding:10px 0;background:linear-gradient(transparent,var(--bg) 30%);display:flex;z-index:5}
+.callsim{display:grid;grid-template-columns:minmax(0,380px) 1fr;gap:14px;align-items:start}
+.callsim .acc.sel{border-color:var(--brand);background:var(--brand-soft)}
+.callsim .acc{cursor:pointer}
+.callmsgs{background:#efeae0;border-radius:12px;min-height:260px;max-height:52vh}
+@media (max-width:900px){.callsim{grid-template-columns:1fr}.callsim #conv{order:-1}}
+@media (max-width:600px){
+  .seg button{min-width:calc(50% - 6px);padding:11px 6px}
+  .calls-form input,.calls-form select,.calls-form textarea{font-size:16px}
+  .page-head .row{width:100%}
+}

@@ -51,7 +51,8 @@ export function createOrder(input, { actor = 'system', user } = {}) {
       items_total: itemsTotal, delivery_fee: fee || 0, total: itemsTotal + (fee || 0), status: input.status || 'new',
       carrier_account_id: input.carrierAccountId ?? null, consent_message_id: input.consentMessageId ?? null, consent_text: input.consentText ?? null,
       confirmed_at: input.status === 'confirmed' ? now() : null, confirmed_via: input.confirmedVia ?? null, notes: input.notes ?? null,
-      created_by: user?.id ?? null,
+      created_by: user?.id ?? null, source_channel: input.sourceChannel ?? null, campaign_id: input.campaignId ?? null,
+      payment_method: input.paymentMethod ?? null,
     });
     for (const it of items) db.insert('order_items', { order_id: id, product_id: it.product_id, sku: it.sku, name: it.name, qty: it.qty, unit_price: it.unit_price });
     db.insert('order_events', { order_id: id, status: input.status || 'new', note: `مصدر: ${input.source}${input.externalNumber ? ' #' + String(input.externalNumber).replace(/^#/, '') : ''}`, actor });

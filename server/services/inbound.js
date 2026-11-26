@@ -6,6 +6,7 @@ import { runAssistant } from '../ai/agent.js';
 import { getOrder, setOrderStatus, validateOrder } from './orders.js';
 import { dispatchOrder } from './shipping.js';
 import { audit } from './audit.js';
+import { confirmAndShip, cancelOrderFull } from './confirm.js';
 
 export async function processWhatsAppWebhook(body) {
   const results = [];
@@ -30,6 +31,11 @@ async function handleMessage(m, profileName) {
   } else if (m.type === 'button') { buttonId = m.button?.payload; text = m.button?.text || ''; type = 'button'; }
   else { text = `[${m.type}]`; type = m.type; }
 
+  // إعلان Meta (Click-to-WhatsApp): واتساب يبعث referral مع أول رسالة — نستعملوه لاختيار إعداد الحملة
+  if (m.referral && !conv.state.referral) {
+    conv.state.referral = { source_id: m.referral.source_id || null, source_type: m.referral.source_type || null, headline: m.referral.headline || null, source_url: m.referral.source_url || null, ctwa_clid: m.referral.ctwa_clid || null };
+    saveState(conv);
+  }
   const inboundId = addMessage(conv, { direction: 'in', author: 'customer', body: text, type, waMessageId: m.id });
   if (buttonId?.startsWith('oc:')) return handleOrderButton(conv, buttonId, inboundId);
   if (type !== 'text' && type !== 'button') {
@@ -49,7 +55,7 @@ async function handleOrderButton(conv, id, inboundId) {
     return { ignored: true };
   }
   if (action === 'cancel') {
-    setOrderStatus(order.id, 'cancelled', { note: 'ألغاها الزبون عبر واتساب', actor: 'customer' });
+    cancelOrderFull(order.id, { note: 'ألغاها الزبون عبر واتساب', actor: 'customer' });
     sendText(conv, `لغينا الكوموند ${order.number}. إذا بدّلت رأيك راني هنا 🙏`, { author: 'system' });
     return { cancelled: order.id };
   }
@@ -67,11 +73,9 @@ async function handleOrderButton(conv, id, inboundId) {
       sendText(conv, `باش نبعثو الكوموند ${order.number} يلزمنا: ${blocking.join('، ')}. ابعثهملي من فضلك.`, { author: 'system' });
       return { incomplete: blocking };
     }
-    setOrderStatus(order.id, 'confirmed', { note: 'أكّدها الزبون عبر زر واتساب', actor: 'customer', extra: { confirmed_at: new Date().toISOString(), confirmed_via: 'whatsapp_button', consent_message_id: inboundId } });
-    audit('order.confirm.button', { actor: 'customer', entity: 'orders', entityId: order.id });
-    const r = await dispatchOrder(order.id, { actor: 'auto' });
-    if (!r.ok) sendText(conv, `أكّدنا الكوموند ${order.number} ✅ راح نبعثولك رقم التتبع قريب.`, { author: 'system' });
-    return { confirmed: order.id, dispatch: r };
+    const r = await confirmAndShip(order.id, { via: 'whatsapp_button', actor: 'customer', consentMessageId: inboundId });
+    if (!r.dispatched && !r.already) sendText(conv, `أكّدنا الكوموند ${order.number} ✅ راح نبعثولك رقم التتبع قريب.`, { author: 'system' });
+    return { confirmed: order.id, result: r };
   }
   return { error: 'unknown_action' };
 }
