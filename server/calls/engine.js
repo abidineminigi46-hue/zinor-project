@@ -8,6 +8,7 @@ import { audit, logError } from '../services/audit.js';
 import { nextSlot, windowAt, localParts, fmtLocal, sortedWindows } from './time.js';
 import * as dialog from './dialog.js';
 import { clockNow } from './clock.js';
+import { withSpeech } from './speech.js';
 import { simulationProvider, n8nProvider } from './bridge.js';
 import { callsBridgeReady } from '../config.js';
 import { confirmAndShip, cancelOrderFull } from '../services/confirm.js';
@@ -188,7 +189,7 @@ export const callByProviderId = (pid) => { const r = db.get('SELECT id FROM call
 function save(call) { db.run('UPDATE calls SET state=?, transcript=? WHERE id=?', JSON.stringify(call.state), JSON.stringify(call.transcript), call.id); }
 function log(call, who, text, extra = {}) { call.transcript.push({ who, text, at: clockNow().toISOString(), ...extra }); }
 function logReply(call, rep) {
-  for (const a of rep.actions) log(call, 'bot', a.type === 'say' ? a.text : `▶ تسجيل: ${db.get('SELECT name FROM media WHERE id=?', a.media_id)?.name || a.media_id}`, { play: a.type === 'play' });
+  for (const a of rep.actions) log(call, 'bot', a.type === 'say' ? a.text : `▶ تسجيل: ${db.get('SELECT name FROM media WHERE id=?', a.media_id)?.name || a.media_id}`, a.type === 'play' ? { play: true, media_id: a.media_id } : { speech: a.speech });
 }
 
 /** answered | no_answer | busy | voicemail | failed | completed */
@@ -201,9 +202,10 @@ export async function callEvent(callId, type, data = {}) {
     if (call.status === 'in_progress') return { duplicate: true };
     db.run("UPDATE calls SET status='in_progress', started_at=? WHERE id=?", dbNow(), callId);
     call.status = 'in_progress';
-    const rep = call.state.test
+    let rep = call.state.test
       ? { actions: [{ type: 'say', text: 'سلام، هاذي مكالمة تجريبية من Zinor. إذا تسمعني، قول أي حاجة.' }], end: false }
       : dialog.start(call, ops);
+    rep = withSpeech(rep);
     logReply(call, rep); save(call);
     return rep;
   }
@@ -222,6 +224,7 @@ export async function callTurn(callId, text) {
   let rep;
   if (call.state.test) rep = { actions: [{ type: 'say', text: 'مليح، كلش يخدم: نسمعك وتسمعني. بالسلامة.' }], end: true, outcome: 'test_ok' };
   else rep = await dialog.turn(call, text, ops, clockNow());
+  rep = withSpeech(rep);
   logReply(call, rep); save(call);
   if (rep.end) await finalize(call, rep.outcome);
   return rep;
@@ -235,6 +238,7 @@ export function inboundCall(fromPhone, providerCallId = null) {
   let rep;
   if (!s.inbound_enabled) rep = { actions: [{ type: 'say', text: 'سلام، معاك متجر Zinor. حالياً ما نجاوبوش على المكالمات، ابعثلنا في واتساب ونجاوبوك. بالسلامة.' }], end: true, outcome: 'inbound_off' };
   else rep = dialog.start(call, ops);
+  rep = withSpeech(rep);
   if (call.state.order_id) db.run('UPDATE calls SET order_id=? WHERE id=?', call.state.order_id, id);
   logReply(call, rep); save(call);
   if (rep.end) finalize(call, rep.outcome);

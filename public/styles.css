@@ -189,7 +189,10 @@ tr.click{cursor:pointer} tr.click:hover td{background:#fbfaf6}
 .callsim .acc.sel{border-color:var(--brand);background:var(--brand-soft)}
 .callsim .acc{cursor:pointer}
 .callmsgs{background:#efeae0;border-radius:12px;min-height:260px;max-height:52vh}
-@media (max-width:900px){.callsim{grid-template-columns:1fr}.callsim #conv{order:-1}}
+@media (max-width:900px){.callsim{grid-template-columns:minmax(0,1fr)}.callsim #conv{order:-1}}
+.callsim>*{min-width:0}
+label.f select,label.f input{max-width:100%;width:100%}
+.recorder .row>*{flex:1 1 auto}
 @media (max-width:600px){
   .seg button{min-width:calc(50% - 6px);padding:11px 6px}
   .calls-form input,.calls-form select,.calls-form textarea{font-size:16px}

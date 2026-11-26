@@ -1,5 +1,6 @@
 import { state, esc, $, $$, api, act, toast, modal, fmtDate, orderBadge, isAdmin, icon } from './core.js';
 import { setCleanup } from './app.js';
+import { mountVoicePicker, mountRecorder, playActions, stopPlayback, voiceDiagnosis } from './voice.js';
 
 const MODE_SHORT = { whatsapp: 'واتساب فقط', call: 'مكالمة فقط', whatsapp_call: 'واتساب + مكالمة', manual: 'يدوي' };
 const OUTCOME = {
@@ -70,6 +71,7 @@ export async function callsSettingsPage(main) {
     <section class="card stack"><h2>الصوت المخصّص للحوار</h2><div class="muted small">هاذا الصوت اللي يردّ بيه المساعد طول المكالمة.</div>
       ${[['outbound', 'المكالمات الصادرة'], ['inbound', 'المكالمات الواردة']].map(([k, l]) => `<div class="stack" style="gap:6px"><label class="f">${l}<select name="voice_${k}" ${ro ? 'disabled' : ''}>${voiceOpts(s.voice[k])}</select></label>
         <div class="row"><button type="button" class="btn sm" data-sample="${k}">▶ اسمع عيّنة بالدارجة</button><span class="small muted" data-vnote="${k}"></span></div></div>`).join('')}
+      <div data-browserwarn></div>
       <div class="note">أصوات Twilio (Google/Polly) تنطق عربي فصيح، ماشي دارجة. للنطق الأقرب للدارجة حط ELEVENLABS_API_KEY وتبانلك أصوات ElevenLabs هنا.${cfg.voices.elevenlabsError ? ` <b style="color:var(--danger)">ElevenLabs: ${esc(cfg.voices.elevenlabsError)}</b>` : ''}</div>
       <div class="acc stack"><label class="switch"><input type="checkbox" name="same_voice" ${s.voice.same_voice ? 'checked' : ''} ${!cfg.voices.cloningSupported || ro ? 'disabled' : ''}> نفس الصوت طول المكالمة (صوت مستنسخ)</label>
         ${cfg.voices.cloningSupported ? `<div class="small">${s.voice.clone_voice_id ? `صوت مستنسخ موجود (صاحبو: <b>${esc(s.voice.clone_owner)}</b>)` : 'ما كانش صوت مستنسخ بعد.'}</div>${ro ? '' : '<button type="button" class="btn sm" id="clone">استنسخ صوت من تسجيلاتي</button>'}`
@@ -77,8 +79,7 @@ export async function callsSettingsPage(main) {
     </section>
 
     <section class="card stack"><h2>المقدّمة المسجّلة</h2><div class="muted small">تسجيل يتشغّل مرة وحدة في البداية (كي يجاوب الزبون، ولا كي المساعد يستقبل المكالمة)، من بعد يكمّل الصوت المخصّص للحوار.</div>
-      ${isAdmin() ? `<div class="stack upload"><label class="f">اسم التسجيل<input id="mname" placeholder="مثلاً: مقدّمة سارة"></label>
-        <label class="btn primary" style="position:relative;overflow:hidden">⬆ ارفع MP3 ولا WAV من التلفون<input type="file" id="mfile" accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,.mp3,.wav" style="position:absolute;inset:0;opacity:0"></label></div>
+      ${isAdmin() ? `<div id="recorder"></div>
         <div id="mlist" class="stack" style="gap:8px">${cfg.media.map(mediaRow).join('') || '<div class="muted small">ما كانش تسجيلات</div>'}</div>
         <label class="f">مقدّمة المكالمات الصادرة<select name="intro_outbound">${mediaOpts(s.intros.outbound_media_id)}</select></label>
         <label class="f">مقدّمة المكالمات الواردة<select name="intro_inbound">${mediaOpts(s.intros.inbound_media_id)}</select></label>` : '<div class="muted small">رفع التسجيلات وسماعها للمشرف برك.</div>'}
@@ -92,17 +93,11 @@ export async function callsSettingsPage(main) {
   $$('[data-copy]').forEach((b) => b.onclick = () => { navigator.clipboard?.writeText(b.dataset.copy); toast('تنسخ'); });
   $('#addcamp') && ($('#addcamp').onclick = () => $('#camps').insertAdjacentHTML('beforeend', campRow({ source_id: '', label: '', mode: 'whatsapp' })));
   $('#camps').addEventListener('click', (e) => { if (e.target.closest('[data-delcamp]')) e.target.closest('.camp').remove(); });
-  $$('[data-sample]').forEach((b) => b.onclick = () => playSample($(`[name=voice_${b.dataset.sample}]`).value, $(`[name=${b.dataset.sample}_opening]`)?.value, $(`[data-vnote=${b.dataset.sample}]`)));
+  $$('[data-sample]').forEach((b) => b.onclick = () => playSample($(`[name=voice_${b.dataset.sample}]`).value, null, $(`[data-vnote=${b.dataset.sample}]`)));
+  voiceDiagnosis().then((d) => { if (!d.ok) $('[data-browserwarn]').innerHTML = `<div class="alert warn small"><b>عيّنات المتصفح ما تقراش العربية في هاذ الجهاز:</b> ${esc(d.reason)}</div>`; });
   $('#testcall') && ($('#testcall').onclick = async () => { const r = await act(() => api('POST', '/api/calls/test')); toast(r.call.real ? 'تبعث الاتصال الحقيقي لرقمك' : 'محاكاة: المكالمة راهي في محاكي المكالمات'); });
   if (isAdmin()) {
-    $('#mfile').onchange = async (e) => {
-      const f = e.target.files[0];
-      if (!f) return;
-      if (f.size > 8 * 1024 * 1024) return toast('الملف كبير بزاف (8MB أقصى)', 'err');
-      const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
-      await act(() => api('POST', '/api/media', { name: $('#mname').value || f.name.replace(/\.\w+$/, ''), data }), 'ترفع التسجيل');
-      callsSettingsPage(main);
-    };
+    mountRecorder($('#recorder'), { onSaved: () => callsSettingsPage(main) });
     $('#mlist').addEventListener('click', async (e) => {
       const del = e.target.closest('[data-delmedia]');
       if (del && confirm('تمسح التسجيل؟')) { await act(() => api('DELETE', `/api/media/${del.dataset.delmedia}`), 'تمسح'); callsSettingsPage(main); }
@@ -146,37 +141,36 @@ const campRow = (c) => `<div class="camp row"><input data-c="id" placeholder="م
 const mediaRow = (m) => `<div class="acc"><div class="row between"><b>${esc(m.name)}</b><span class="small muted">${m.mime === 'audio/wav' ? 'WAV' : 'MP3'} · ${Math.round(m.size / 1024)} KB</span></div>
   <audio controls preload="none" src="/api/media/${m.id}/audio" style="width:100%"></audio><div class="row"><span class="badge plain b-gold">مقدّمة مسجّلة</span><div class="grow"></div><button type="button" class="btn sm danger" data-delmedia="${m.id}">مسح</button></div></div>`;
 
+// عيّنة الصوت: ElevenLabs يتولّد على الخادم؛ الباقي بصوت عربي من المتصفح (رجل/امرأة حسب الاختيار)
 export async function playSample(voiceId, text, noteEl) {
   try {
-    const r = await fetch(`/api/voices/sample?voice=${encodeURIComponent(voiceId)}&text=${encodeURIComponent(text || '')}`, { credentials: 'same-origin' });
-    if (!r.ok) throw new Error((await r.json()).error);
-    if ((r.headers.get('content-type') || '').includes('audio')) { new Audio(URL.createObjectURL(await r.blob())).play(); if (noteEl) noteEl.textContent = 'صوت ElevenLabs الحقيقي'; return; }
-    const d = await r.json();
-    speak(d.text, d.gender);
-    if (noteEl) noteEl.textContent = d.note;
+    const q = `voice=${encodeURIComponent(voiceId)}${text ? `&text=${encodeURIComponent(text)}` : ''}`;
+    const info = await api('GET', `/api/voices/sample?format=text&${q}`);
+    if (!info.browser) {
+      await playActions([{ type: 'say', speech: info.speech }], { kind: 'server', id: voiceId });
+      if (noteEl) noteEl.textContent = 'صوت ElevenLabs الحقيقي';
+      return;
+    }
+    const d = await voiceDiagnosis();
+    if (!d.ok) { if (noteEl) noteEl.textContent = 'ما كانش صوت عربي في المتصفح — شوف التنبيه'; return toast('ما كانش صوت عربي في هاذ المتصفح', 'err'); }
+    const male = /male|maged|majed|tarik|hamed|naayf|omar|shakir|hamdan|fahed|rami|zayd/i, female = /female|laila|layla|salma|hoda|zariyah|mariam|amira|fatima|sana|zeina|hala/i;
+    const voice = d.voices.find((v) => (info.gender === 'male' ? male : female).test(v.name)) || d.voices[0];
+    await playActions([{ type: 'say', speech: info.speech }], { kind: 'browser', voice });
+    if (noteEl) noteEl.textContent = `${info.note} — ${voice.name}`;
   } catch (e) { toast(e.message, 'err'); }
-}
-
-export function speak(text, gender = 'female') {
-  if (!('speechSynthesis' in window)) return toast('المتصفح ما يدعمش القراءة بالصوت', 'err');
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'ar';
-  const vs = speechSynthesis.getVoices().filter((v) => v.lang?.toLowerCase().startsWith('ar'));
-  const pick = vs.find((v) => (gender === 'male' ? /male|maged|tarik|hamed|naayf|omar/i : /female|laila|salma|hoda|zariyah|mariam/i).test(v.name)) || vs[0];
-  if (pick) u.voice = pick;
-  u.pitch = gender === 'male' ? 0.8 : 1.1;
-  speechSynthesis.cancel(); speechSynthesis.speak(u);
 }
 
 // ───────────── محاكي المكالمات ─────────────
 export async function callSimPage(main) {
-  let current = null, voiceOn = true;
+  let current = null, voiceOn = true, showSpeech = false, picker = null;
   const cfg = await api('GET', '/api/calls/config');
-  const genderOf = (dir) => cfg.voices.voices.find((v) => v.id === cfg.settings.voice[dir === 'in' ? 'inbound' : 'outbound'])?.gender || 'female';
   main.innerHTML = `<div class="page-head"><div><h1>محاكي المكالمات</h1><div class="muted small">جرّب المكالمة الصادرة والواردة بلا ما تخلّص — نفس المسار تاع n8n / خدمة الهاتف</div></div>
     <div class="row"><button class="btn" id="rundue">شغّل الجدولة دُرك</button><a class="btn" href="#/calls">الإعدادات</a></div></div>
     <div class="callsim">
       <div class="stack">
+        <div class="card stack"><h2>صوت المحاكي</h2><div id="vpick"></div></div>
+        ${isAdmin() ? `<div class="card stack"><h2>المقدّمة المسجّلة</h2><div class="small muted">تتشغّل مرة وحدة كي تضغط «جاوب» (ولا في بداية المكالمة الواردة)، ومن بعد يكمّل المساعد.</div>
+          <div id="simrec"></div><div id="simintros" class="stack" style="gap:8px"></div></div>` : ''}
         <div class="card stack"><h2>الزبون يعيّط للمتجر</h2><div class="row"><input id="infrom" inputmode="tel" placeholder="رقم المتصل 05..." class="grow"><button class="btn primary" id="inbtn">📞 عيّط</button></div></div>
         <div class="card stack"><div class="row between"><h2>المكالمات الجارية</h2><span class="small muted">تجريبية</span></div><div id="active"></div></div>
         <div class="card stack"><h2>المحاولات المبرمجة</h2><div id="sched" class="small"></div></div>
@@ -184,6 +178,25 @@ export async function callSimPage(main) {
       </div>
       <div class="card stack" id="conv"><div class="empty">اختار مكالمة ولا عيّط للمتجر</div></div>
     </div>`;
+  picker = await mountVoicePicker($('#vpick'), { serverVoices: cfg.voices.voices });
+  const play = (rep) => { if (voiceOn && rep?.actions) playActions(rep.actions, picker.choice); };
+
+  // المقدّمات: تسجيل/رفع + اختيار للصادرة والواردة (يتحفظ مباشرة)
+  const loadIntros = async () => {
+    if (!isAdmin()) return;
+    const [{ media }, conf] = await Promise.all([api('GET', '/api/media'), api('GET', '/api/calls/config')]);
+    const s = conf.settings;
+    const sel = (k, v) => `<label class="f">${k === 'outbound_media_id' ? 'مقدّمة المكالمات الصادرة' : 'مقدّمة المكالمات الواردة'}<select data-intro="${k}"><option value="">بلا مقدّمة</option>${media.map((m) => `<option value="${m.id}" ${m.id === v ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select></label>`;
+    $('#simintros').innerHTML = media.map((m) => `<div class="acc"><div class="row between small"><b>${esc(m.name)}</b><span class="muted">${m.mime === 'audio/wav' ? 'WAV' : 'MP3'}</span></div><audio controls preload="none" src="/api/media/${m.id}/audio" style="width:100%"></audio></div>`).join('')
+      + sel('outbound_media_id', s.intros.outbound_media_id) + sel('inbound_media_id', s.intros.inbound_media_id);
+    $$('[data-intro]').forEach((x) => x.onchange = async () => {
+      const c = (await api('GET', '/api/calls/config')).settings;
+      c.intros[x.dataset.intro] = Number(x.value) || null;
+      await act(() => api('PUT', '/api/settings/calls', c), 'تحفظ الاختيار');
+    });
+  };
+  if (isAdmin()) { mountRecorder($('#simrec'), { onSaved: async (m) => { await loadIntros(); const c = (await api('GET', '/api/calls/config')).settings; if (!c.intros.outbound_media_id) { c.intros.outbound_media_id = m.id; await api('PUT', '/api/settings/calls', c); await loadIntros(); toast('اخترناه مقدّمة للمكالمات الصادرة'); } } }); loadIntros(); }
+
   const loadSide = async () => {
     const [a, l] = await Promise.all([api('GET', '/api/sim/calls'), api('GET', '/api/calls')]);
     $('#active').innerHTML = a.active.map((c) => `<div class="acc ${c.id === current ? 'sel' : ''}" data-call="${c.id}"><div class="row between"><b>${c.direction === 'in' ? '⬇ واردة' : '⬆ صادرة'} · ${esc(c.number || c.phone)}</b>
@@ -194,38 +207,41 @@ export async function callSimPage(main) {
     $$('[data-call]').forEach((el) => el.onclick = (e) => { if (e.target.closest('button')) return; current = Number(el.dataset.call); loadConv(); loadSide(); });
     $$('[data-ev]').forEach((b) => b.onclick = async () => {
       const r = await act(() => api('POST', `/api/sim/calls/${b.dataset.id}/event`, { type: b.dataset.ev }));
-      if (b.dataset.ev === 'answered') { current = Number(b.dataset.id); sayReply(r.reply, r.call.direction); }
+      if (b.dataset.ev === 'answered') { current = Number(b.dataset.id); play(r.reply); }
       loadConv(); loadSide();
     });
   };
-  const sayReply = (rep, dir) => { if (voiceOn && rep?.actions) speak(rep.actions.filter((x) => x.type === 'say').map((x) => x.text).join(' '), genderOf(dir)); };
   const loadConv = async () => {
     if (!current) return;
     const { call: c } = await api('GET', `/api/calls/${current}`);
     const live = c.status === 'in_progress';
     $('#conv').innerHTML = `<div class="row between"><div><h2>${c.direction === 'in' ? 'مكالمة واردة' : 'مكالمة صادرة'} · <span class="mono">${esc(c.phone)}</span></h2>
         <div class="small muted">${c.order_id ? `<a href="#/orders/${c.order_id}">فتح الطلب ←</a>` : 'ما تربطتش بطلب بعد'}</div></div>${live ? '<span class="badge b-green">جارية</span>' : outcomeBadge(c.outcome, c.status)}</div>
-      <label class="switch small"><input type="checkbox" id="voiceon" ${voiceOn ? 'checked' : ''}> اقرا ردود المساعد بالصوت (صوت المتصفح)</label>
-      <div class="msgs callmsgs">${c.transcript.map((m) => `<div class="msg ${m.who === 'customer' ? 'out' : 'in'}"><div class="who">${m.who === 'customer' ? 'الزبون (أنت)' : m.play ? 'مقدّمة مسجّلة' : 'المساعد 🤖'}</div><div class="body">${esc(m.text)}</div></div>`).join('')}</div>
+      <div class="row"><label class="switch small"><input type="checkbox" id="voiceon" ${voiceOn ? 'checked' : ''}> شغّل الصوت</label><label class="switch small"><input type="checkbox" id="showspeech" ${showSpeech ? 'checked' : ''}> اعرض النص المخصّص للصوت</label></div>
+      <div class="msgs callmsgs">${c.transcript.map((m, i) => `<div class="msg ${m.who === 'customer' ? 'out' : 'in'}"><div class="who">${m.who === 'customer' ? 'الزبون (أنت)' : m.play ? '▶ مقدّمة مسجّلة' : 'المساعد 🤖'}</div>
+        ${m.play ? `<audio controls preload="none" src="/api/media/${m.media_id}/audio" style="width:220px;max-width:100%"></audio>` : `<div class="body">${esc(showSpeech && m.speech ? m.speech : m.text)}</div>`}
+        ${m.who === 'bot' && !m.play && m.speech ? `<button type="button" class="btn sm ghost" data-replay="${i}">🔊</button>` : ''}</div>`).join('')}</div>
       ${live ? `<div class="chips">${['ايه', 'لا', 'واش نتا روبو؟', 'عيطلي على الخمسة العشية', 'خليني نخمم', 'نحب نبدل العنوان', 'نحب نلغي الكوموند', 'وين راهي الكوموند؟', 'نحب نهدر مع موظف'].map((t) => `<button class="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('')}</div>
         <form class="composer" id="sayf" style="border:1px solid var(--line);border-radius:12px"><input id="saytext" class="grow" placeholder="واش يقول الزبون..." autocomplete="off"><button class="btn primary">قول</button><button type="button" class="btn danger" id="hang">سكّر</button></form>` : ''}`;
     const box = $('.callmsgs'); box.scrollTop = box.scrollHeight;
-    $('#voiceon').onchange = (e) => { voiceOn = e.target.checked; if (!voiceOn) speechSynthesis?.cancel(); };
-    const send = async (text) => { const r = await act(() => api('POST', `/api/sim/calls/${current}/say`, { text })); sayReply(r.reply, c.direction); loadConv(); loadSide(); };
+    $('#voiceon').onchange = (e) => { voiceOn = e.target.checked; if (!voiceOn) stopPlayback(); };
+    $('#showspeech').onchange = (e) => { showSpeech = e.target.checked; loadConv(); };
+    $$('[data-replay]').forEach((b) => b.onclick = () => { const m = c.transcript[Number(b.dataset.replay)]; playActions([{ type: 'say', speech: m.speech }], picker.choice); });
+    const send = async (text) => { const r = await act(() => api('POST', `/api/sim/calls/${current}/say`, { text })); play(r.reply); loadConv(); loadSide(); };
     $('#sayf') && ($('#sayf').onsubmit = (e) => { e.preventDefault(); const t = $('#saytext').value.trim(); if (t) { $('#saytext').value = ''; send(t); } });
     $$('#conv .chip').forEach((b) => b.onclick = () => send(b.dataset.t));
-    $('#hang') && ($('#hang').onclick = async () => { await act(() => api('POST', `/api/sim/calls/${current}/event`, { type: 'completed' })); speechSynthesis?.cancel(); loadConv(); loadSide(); });
+    $('#hang') && ($('#hang').onclick = async () => { await act(() => api('POST', `/api/sim/calls/${current}/event`, { type: 'completed' })); stopPlayback(); loadConv(); loadSide(); });
   };
   $('#inbtn').onclick = async () => {
     const from = $('#infrom').value.trim();
     if (!from) return toast('حط رقم المتصل', 'err');
     const r = await act(() => api('POST', '/api/sim/calls/inbound', { from }));
-    current = r.call.id; sayReply(r.reply, 'in'); loadConv(); loadSide();
+    current = r.call.id; play(r.reply); loadConv(); loadSide();
   };
   $('#rundue').onclick = async () => { const r = await act(() => api('POST', '/api/sim/calls/run-due', {})); toast(r.dialed ? `${r.dialed} مكالمة بدات` : 'ما كانش محاولات حان وقتها (أو خارج الفترات)'); loadSide(); };
   await loadSide();
   const timer = setInterval(loadSide, 5000);
-  setCleanup(() => { clearInterval(timer); window.speechSynthesis?.cancel(); });
+  setCleanup(() => { clearInterval(timer); stopPlayback(); });
 }
 
 // ───────────── كارت المكالمات في صفحة الطلب ─────────────

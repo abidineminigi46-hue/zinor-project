@@ -23,6 +23,7 @@ import { cancelOrderFull } from '../services/confirm.js';
 import * as calls from '../calls/engine.js';
 import { saveIntro, listMedia, getMedia, deleteMedia, mediaPath } from '../calls/media.js';
 import { listVoices, synthesize, cloneVoice, SAMPLE_TEXT, voiceInfo } from '../calls/voices.js';
+import { toSpeech, SAMPLE_SPEECH_TEXT } from '../calls/speech.js';
 import { callsBridgeReady } from '../config.js';
 import fs from 'node:fs';
 
@@ -409,11 +410,19 @@ api.get('/api/media/:id/audio', (req, res) => {
 // الأصوات: القائمة + عيّنة بالدارجة + الاستنساخ
 api.get('/api/voices', async (req, res) => send(res, 200, await listVoices()));
 api.get('/api/voices/sample', async (req, res) => {
-  admin(req);
   const v = voiceInfo(req.query.voice);
-  const text = String(req.query.text || SAMPLE_TEXT).slice(0, 300);
-  if (v.provider !== 'elevenlabs') return send(res, 200, { browser: true, gender: v.gender, text, note: v.provider === 'twilio' ? 'العيّنة تقريبية من المتصفح — الصوت الحقيقي يتسمع في أول مكالمة تجريبية' : 'صوت المحاكاة' });
-  const rel = await synthesize(req.query.voice, text);
+  const text = String(req.query.text || SAMPLE_SPEECH_TEXT).slice(0, 400);
+  const speech = toSpeech(text);
+  if (v.provider !== 'elevenlabs' || req.query.format === 'text') return send(res, 200, { browser: v.provider !== 'elevenlabs', gender: v.gender, text, speech, note: v.provider === 'twilio' ? 'هنا يتقرا بصوت المتصفح — صوت Twilio الحقيقي يتسمع في المكالمة التجريبية' : v.provider === 'elevenlabs' ? '' : 'صوت المتصفح' });
+  const rel = await synthesize(req.query.voice, speech);
+  const file = mediaPath(rel);
+  res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Content-Length': fs.statSync(file).size, 'X-Speech-Text': encodeURIComponent(speech) });
+  fs.createReadStream(file).pipe(res);
+});
+// صوت ElevenLabs لأي جملة من المحاكي (إذا كاين مفتاح)
+api.get('/api/voices/tts', async (req, res) => {
+  if (!String(req.query.voice).startsWith('el:')) throw httpErr(400, 'غير لأصوات ElevenLabs');
+  const rel = await synthesize(req.query.voice, toSpeech(String(req.query.text || '').slice(0, 600)));
   const file = mediaPath(rel);
   res.writeHead(200, { 'Content-Type': 'audio/mpeg', 'Content-Length': fs.statSync(file).size });
   fs.createReadStream(file).pipe(res);

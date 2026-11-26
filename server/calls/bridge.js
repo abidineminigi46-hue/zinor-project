@@ -7,6 +7,7 @@ import { config, callsBridgeReady } from '../config.js';
 import { hmac, safeEqual } from '../crypto.js';
 import { getMedia, signedUrl } from './media.js';
 import { voiceInfo, synthesize } from './voices.js';
+import { toSpeech } from './speech.js';
 
 export const toE164 = (local) => { const d = String(local || '').replace(/\D/g, ''); return d.startsWith('213') ? `+${d}` : d.startsWith('0') ? `+213${d.slice(1)}` : `+${d}`; };
 
@@ -51,11 +52,12 @@ export async function toTwiml(call, reply, voiceId) {
   for (const a of reply.actions) {
     if (a.type === 'play') { const m = getMedia(a.media_id); if (m) parts.push(`<Play>${xml(signedUrl(m.file))}</Play>`); }
     else if (a.type === 'say') {
+      const speech = a.speech || toSpeech(a.text); // النص المخصّص للصوت (زينور، باب الزوار، ثلاثة آلاف...)
       if (v.provider === 'elevenlabs') {
-        try { parts.push(`<Play>${xml(signedUrl(await synthesize(voiceId, a.text)))}</Play>`); continue; } catch { /* نرجعو لـ Say */ }
+        try { parts.push(`<Play>${xml(signedUrl(await synthesize(voiceId, speech)))}</Play>`); continue; } catch { /* نرجعو لـ Say */ }
       }
       const s = v.say || { voice: 'Google.ar-XA-Standard-A', language: 'ar-XA' };
-      parts.push(`<Say voice="${s.voice}" language="${s.language}">${xml(a.text)}</Say>`);
+      parts.push(`<Say voice="${s.voice}" language="${s.language}">${xml(speech)}</Say>`);
     }
   }
   let body;

@@ -425,3 +425,37 @@ test('7) واتساب والشحن والروتور يبقاو يخدمو + أز
   const sim = await call('POST', `/api/shipments/${shipped.id}/simulate`, { status: 'out_for_delivery' });
   assert.ok(sim.applied);
 });
+
+test('8) النص المخصّص للصوت: الجملة كاملة بالدارجة (زينور، باب الزوار، ثلاثة آلاف وسبعمية دينار)', async () => {
+  const sp = await import('../server/calls/speech.js');
+  assert.equal(sp.numberToDarija(3700), 'ثلاثة آلاف وسبعمية');
+  assert.equal(sp.numberToDarija(500), 'خمسمية');
+  assert.equal(sp.numberToDarija(1250), 'ألف وميتين وخمسين');
+  assert.equal(sp.toSpeech('متجر Zinor في Bab Ezzouar بـ 3700 دينار'), 'متجر زينور في باب الزوار بـ ثلاثة آلاف وسبعمية دينار');
+
+  setClock(T('11:30'));
+  await setCalls({ modes: { woocommerce: 'call' }, intros: { outbound_media_id: null } });
+  const o = (await wooOrder('0556800001', { commune: 'Bab Ezzouar' })).order;
+  await runDue(T('11:30'));
+  const c = callsOf(o.id)[0];
+  const r1 = await ev(c.id, 'answered');
+  const open = r1.reply.actions.find((a) => a.type === 'say');
+  assert.match(open.text, /Zinor/, 'النص المعروض يبقى كيما هو');
+  assert.match(open.speech, /زينور/);
+  const r2 = await speak(c.id, 'ايه');
+  const sum = r2.reply.actions.find((a) => a.type === 'say').speech;
+  assert.match(sum, /باب الزوار/);
+  assert.match(sum, /ثلاثة آلاف وسبعمية دينار/, '3200 + 500');
+  assert.doesNotMatch(sum, /[A-Za-z0-9]/, 'ما يبقاش حتى حرف لاتيني ولا رقم يتفوّت في القراءة');
+  // نفس النص يروح لـ Twilio
+  const tw = await (async () => {
+    const body = JSON.stringify({ call_id: c.id, speech: 'لا' });
+    const ts = Math.floor(Date.now() / 1000);
+    const sig = crypto.createHmac('sha256', SECRET).update(`${ts}.${body}`).digest('hex');
+    return (await fetch(base + '/webhooks/calls/turn', { method: 'POST', headers: { 'content-type': 'application/json', 'x-zinor-timestamp': String(ts), 'x-zinor-signature': sig }, body })).json();
+  })();
+  assert.doesNotMatch(tw.twiml.replace(/<[^>]+>/g, ' ').replace(/https?:\S+/g, ''), /[A-Za-z]{3,}/, 'TwiML <Say> بلا كلمات لاتينية');
+  // العيّنة
+  const s = await call('GET', '/api/voices/sample?format=text&voice=sim-female');
+  assert.match(s.speech, /زينور.*باب الزوار.*ثلاثة آلاف وسبعمية دينار/);
+});
