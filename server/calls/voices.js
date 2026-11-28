@@ -5,6 +5,7 @@ import { config } from '../config.js';
 import { sha } from '../crypto.js';
 import { MEDIA_DIR } from './media.js';
 import { httpErr } from '../services/accounts.js';
+import * as spybox from './spybox.js';
 
 // أصوات Twilio <Say> بالعربية هي عربية فصحى (ماشي دارجة). ElevenLabs يقدر يقرا الدارجة المكتوبة بالحروف العربية بنتيجة أقرب.
 const BASE = [
@@ -31,14 +32,25 @@ async function elevenVoices() {
   return elCache.voices;
 }
 
+// أصوات Gemini TTS عبر SpyBox (Puck أولاً)
+const SPYBOX = Object.entries(spybox.GEMINI_VOICES).sort(([a], [b]) => (a === 'Puck' ? -1 : b === 'Puck' ? 1 : a.localeCompare(b)))
+  .map(([name, gender]) => ({ id: `sb:${name}`, label: `${name} — SpyBox Gemini (${gender === 'male' ? 'رجل' : 'امرأة'})`, gender, provider: 'spybox', paid: true, note: 'يتولّد في SpyBox ويتحسب بالـSBC' }));
+
 export async function listVoices() {
-  return { voices: [...BASE, ...(await elevenVoices())], elevenlabs: Boolean(config.elevenlabs.apiKey), elevenlabsError: elCache.error, cloningSupported: Boolean(config.elevenlabs.apiKey) };
+  return {
+    voices: [...BASE, ...SPYBOX.map((v) => ({ ...v, disabled: !spybox.configured() })), ...(await elevenVoices())],
+    elevenlabs: Boolean(config.elevenlabs.apiKey), elevenlabsError: elCache.error, cloningSupported: Boolean(config.elevenlabs.apiKey),
+    spybox: spybox.configured(),
+  };
 }
-export const voiceInfo = (id) => BASE.find((v) => v.id === id) || (String(id).startsWith('el:') ? { id, provider: 'elevenlabs' } : BASE[0]);
+export const voiceInfo = (id) => BASE.find((v) => v.id === id) || SPYBOX.find((v) => v.id === id)
+  || (String(id).startsWith('el:') ? { id, provider: 'elevenlabs' } : BASE[0]);
+export const isServerVoice = (id) => /^(el|sb):/.test(String(id));
 
 // يولّد MP3 بـ ElevenLabs (مع cache حسب الصوت والنص)
-export async function synthesize(voiceId, text) {
-  if (!String(voiceId).startsWith('el:')) throw httpErr(400, 'التوليد على الخادم غير لأصوات ElevenLabs');
+export async function synthesize(voiceId, text, opts = {}) {
+  if (String(voiceId).startsWith('sb:')) return (await spybox.generate(voiceId, text, opts)).file;
+  if (!String(voiceId).startsWith('el:')) throw httpErr(400, 'التوليد على الخادم غير لأصوات ElevenLabs و SpyBox');
   if (!config.elevenlabs.apiKey) throw httpErr(400, 'ELEVENLABS_API_KEY ناقص');
   const rel = `tts/${sha(`${voiceId}|${config.elevenlabs.model}|${text}`).slice(0, 32)}.mp3`;
   const file = path.join(MEDIA_DIR(), rel);

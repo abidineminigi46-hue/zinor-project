@@ -53,8 +53,14 @@ export async function toTwiml(call, reply, voiceId) {
     if (a.type === 'play') { const m = getMedia(a.media_id); if (m) parts.push(`<Play>${xml(signedUrl(m.file))}</Play>`); }
     else if (a.type === 'say') {
       const speech = a.speech || toSpeech(a.text); // النص المخصّص للصوت (زينور، باب الزوار، ثلاثة آلاف...)
-      if (v.provider === 'elevenlabs') {
-        try { parts.push(`<Play>${xml(signedUrl(await synthesize(voiceId, speech)))}</Play>`); continue; } catch { /* نرجعو لـ Say */ }
+      if (v.provider === 'elevenlabs' || v.provider === 'spybox') {
+        // نفس الصوت للمقدّمة (إذا ما كانش تسجيل) وكل الردود؛ إذا فشل التوليد المكالمة تكمّل بـ <Say>
+        try {
+          const job = synthesize(voiceId, speech, { source: `call#${call.id}` });
+          job.catch(() => {}); // إذا فات الوقت، التوليد يكمّل ويتخزّن للمرة الجاية
+          const rel = await Promise.race([job, new Promise((_, rej) => setTimeout(() => rej(new Error('budget')), config.spybox.callBudgetMs))]);
+          parts.push(`<Play>${xml(signedUrl(rel))}</Play>`); continue;
+        } catch { /* نرجعو لـ Say باش المكالمة ما تتقطعش */ }
       }
       const s = v.say || { voice: 'Google.ar-XA-Standard-A', language: 'ar-XA' };
       parts.push(`<Say voice="${s.voice}" language="${s.language}">${xml(speech)}</Say>`);

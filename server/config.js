@@ -39,6 +39,14 @@ export const config = {
     schedulerSeconds: Number(env('CALLS_SCHEDULER_SECONDS', '30')),
   },
   elevenlabs: { apiKey: env('ELEVENLABS_API_KEY'), model: env('ELEVENLABS_MODEL', 'eleven_multilingual_v2') },
+  spybox: {
+    apiKey: env('SPYBOX_API_KEY'),
+    baseUrl: env('SPYBOX_BASE_URL', 'https://spybox-crea.vercel.app/api/v1').replace(/\/$/, ''),
+    model: env('SPYBOX_MODEL', 'gemini-tts'),
+    timeoutSec: Number(env('SPYBOX_TIMEOUT_SEC', '90')),
+    // أقصى وقت نستناو التوليد وسط مكالمة حقيقية قبل ما نرجعو لـ <Say> (Twilio يستنى ~15 ثانية)
+    callBudgetMs: Number(env('SPYBOX_CALL_BUDGET_MS', '8000')),
+  },
 };
 
 export const waLive = () => Boolean(config.wa.token && config.wa.phoneNumberId);

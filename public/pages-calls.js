@@ -1,6 +1,6 @@
 import { state, esc, $, $$, api, act, toast, modal, fmtDate, orderBadge, isAdmin, icon } from './core.js';
 import { setCleanup } from './app.js';
-import { mountVoicePicker, mountRecorder, playActions, stopPlayback, voiceDiagnosis } from './voice.js';
+import { mountVoicePicker, mountRecorder, playActions, stopPlayback, voiceDiagnosis, spyboxSample, metricLine, latencyVerdict, fmtMs } from './voice.js';
 
 const MODE_SHORT = { whatsapp: 'واتساب فقط', call: 'مكالمة فقط', whatsapp_call: 'واتساب + مكالمة', manual: 'يدوي' };
 const OUTCOME = {
@@ -20,7 +20,7 @@ export async function callsSettingsPage(main) {
   const voices = cfg.voices.voices;
   const voiceOpts = (sel) => ['female', 'male', 'unknown'].map((g) => {
     const vs = voices.filter((v) => (v.gender || 'unknown') === g);
-    return vs.length ? `<optgroup label="${{ female: 'صوت امرأة', male: 'صوت رجل', unknown: 'أصوات أخرى' }[g]}">${vs.map((v) => `<option value="${esc(v.id)}" ${v.id === sel ? 'selected' : ''}>${esc(v.label)}</option>`).join('')}</optgroup>` : '';
+    return vs.length ? `<optgroup label="${{ female: 'صوت امرأة', male: 'صوت رجل', unknown: 'أصوات أخرى' }[g]}">${vs.map((v) => `<option value="${esc(v.id)}" ${v.id === sel ? 'selected' : ''} ${v.disabled && v.id !== sel ? 'disabled' : ''}>${esc(v.label)}${v.disabled ? ' (يحتاج SPYBOX_API_KEY)' : ''}</option>`).join('')}</optgroup>` : '';
   }).join('');
   const mediaOpts = (sel) => `<option value="">بلا مقدّمة مسجّلة</option>` + cfg.media.map((m) => `<option value="${m.id}" ${m.id === sel ? 'selected' : ''}>${esc(m.name)}</option>`).join('');
   const modeChips = (key, val) => `<div class="seg" data-mode="${key}">${Object.entries(MODE_SHORT).map(([k, l]) => `<button type="button" class="${k === val ? 'on' : ''}" data-v="${k}" ${ro ? 'disabled' : ''}>${l}</button>`).join('')}</div>`;
@@ -78,6 +78,12 @@ export async function callsSettingsPage(main) {
           : '<div class="small muted">الاستنساخ يحتاج مزوّد يدعمو (ElevenLabs). حالياً غير متاح.</div>'}</div>
     </section>
 
+    <section class="card stack" id="sbcard"><div class="row between"><h2>SpyBox Gemini TTS</h2>${cfg.voices.spybox ? '<span class="badge b-green">مربوط</span>' : '<span class="badge b-gray">SPYBOX_API_KEY ناقص</span>'}</div>
+      <div class="small muted">اختار Puck (ولا صوت Gemini آخر) في «الصوت المخصّص للحوار». إذا اخترت «بلا مقدّمة مسجّلة»، نفس الصوت يقرا الافتتاحية وكل الردود.</div>
+      <div data-sbstatus class="small"></div>
+      ${cfg.voices.spybox && isAdmin() ? '<div class="row"><button type="button" class="btn sm" data-sbpre>حضّر الافتتاحية مسبقاً بالصوت المختار</button></div><div class="small muted">الجمل الثابتة اللي تتحضّر مسبقاً تتشغّل فوراً في المكالمة (0 تأخير، 0 SBC من بعد).</div>' : ''}
+    </section>
+
     <section class="card stack"><h2>المقدّمة المسجّلة</h2><div class="muted small">تسجيل يتشغّل مرة وحدة في البداية (كي يجاوب الزبون، ولا كي المساعد يستقبل المكالمة)، من بعد يكمّل الصوت المخصّص للحوار.</div>
       ${isAdmin() ? `<div id="recorder"></div>
         <div id="mlist" class="stack" style="gap:8px">${cfg.media.map(mediaRow).join('') || '<div class="muted small">ما كانش تسجيلات</div>'}</div>
@@ -94,6 +100,23 @@ export async function callsSettingsPage(main) {
   $('#addcamp') && ($('#addcamp').onclick = () => $('#camps').insertAdjacentHTML('beforeend', campRow({ source_id: '', label: '', mode: 'whatsapp' })));
   $('#camps').addEventListener('click', (e) => { if (e.target.closest('[data-delcamp]')) e.target.closest('.camp').remove(); });
   $$('[data-sample]').forEach((b) => b.onclick = () => playSample($(`[name=voice_${b.dataset.sample}]`).value, null, $(`[data-vnote=${b.dataset.sample}]`)));
+  const loadSb = () => api('GET', '/api/voices/spybox').then((st) => {
+    if (!$('[data-sbstatus]')) return;
+    const v = latencyVerdict(st.stats.avg_ms);
+    $('[data-sbstatus]').innerHTML = `<dl class="kv"><dt>الرصيد</dt><dd>${st.balance ? `${st.balance.available} SBC` : esc(st.balance_error || '—')}</dd>
+      <dt>متوسط التأخير</dt><dd>${fmtMs(st.stats.avg_ms)}${st.stats.p90_ms ? ` · p90 ${fmtMs(st.stats.p90_ms)}` : ''} <span class="muted">(${st.stats.count} توليد)</span></dd>
+      <dt>للمكالمة المباشرة</dt><dd><span class="badge b-${v.tone}">${v.text}</span></dd><dt>المصروف</dt><dd>${st.stats.credits_total} SBC${st.stats.failed ? ` · ${st.stats.failed} فشل` : ''}</dd></dl>`;
+  }).catch((e) => { if ($('[data-sbstatus]')) $('[data-sbstatus]').textContent = e.message; });
+  if (cfg.voices.spybox) { loadSb(); window.addEventListener('zinor:tts', loadSb); setCleanup(() => window.removeEventListener('zinor:tts', loadSb)); }
+  $('[data-sbpre]') && ($('[data-sbpre]').onclick = async () => {
+    const voice = $('[name=voice_outbound]').value;
+    if (!voice.startsWith('sb:')) return toast('اختار صوت SpyBox (Puck) في الصوت المخصّص للحوار واحفظ أولاً', 'err');
+    const q = await act(() => api('POST', '/api/voices/pregenerate', { voice, dry_run: true }));
+    if (!confirm(`تحضير الافتتاحية (صادرة + واردة) بصوت ${voice.slice(3)}: ${q.estimated_credits} SBC تقريباً. نكمّلو؟`)) return;
+    const r = await act(() => api('POST', '/api/voices/pregenerate', { voice }), 'تحضّرت الافتتاحية');
+    toast(r.items.map((j) => (j.cached ? 'من الذاكرة' : fmtMs(j.ms_total))).join(' · '));
+    callsSettingsPage(main);
+  });
   voiceDiagnosis().then((d) => { if (!d.ok) $('[data-browserwarn]').innerHTML = `<div class="alert warn small"><b>عيّنات المتصفح ما تقراش العربية في هاذ الجهاز:</b> ${esc(d.reason)}</div>`; });
   $('#testcall') && ($('#testcall').onclick = async () => { const r = await act(() => api('POST', '/api/calls/test')); toast(r.call.real ? 'تبعث الاتصال الحقيقي لرقمك' : 'محاكاة: المكالمة راهي في محاكي المكالمات'); });
   if (isAdmin()) {
@@ -143,6 +166,7 @@ const mediaRow = (m) => `<div class="acc"><div class="row between"><b>${esc(m.na
 
 // عيّنة الصوت: ElevenLabs يتولّد على الخادم؛ الباقي بصوت عربي من المتصفح (رجل/امرأة حسب الاختيار)
 export async function playSample(voiceId, text, noteEl) {
+  if (String(voiceId).startsWith('sb:')) { if (noteEl) noteEl.textContent = 'صوت مدفوع: شوف التكلفة قبل التوليد'; return spyboxSample(voiceId, text); }
   try {
     const q = `voice=${encodeURIComponent(voiceId)}${text ? `&text=${encodeURIComponent(text)}` : ''}`;
     const info = await api('GET', `/api/voices/sample?format=text&${q}`);
@@ -163,12 +187,15 @@ export async function playSample(voiceId, text, noteEl) {
 // ───────────── محاكي المكالمات ─────────────
 export async function callSimPage(main) {
   let current = null, voiceOn = true, showSpeech = false, picker = null;
+  const metrics = new Map(); // `${callId}:${text}` → قياس SpyBox
+  const session = [];
+  let warned = false;
   const cfg = await api('GET', '/api/calls/config');
   main.innerHTML = `<div class="page-head"><div><h1>محاكي المكالمات</h1><div class="muted small">جرّب المكالمة الصادرة والواردة بلا ما تخلّص — نفس المسار تاع n8n / خدمة الهاتف</div></div>
     <div class="row"><button class="btn" id="rundue">شغّل الجدولة دُرك</button><a class="btn" href="#/calls">الإعدادات</a></div></div>
     <div class="callsim">
       <div class="stack">
-        <div class="card stack"><h2>صوت المحاكي</h2><div id="vpick"></div></div>
+        <div class="card stack"><h2>صوت المحاكي</h2><div id="vpick"></div><div id="latency" class="small"></div></div>
         ${isAdmin() ? `<div class="card stack"><h2>المقدّمة المسجّلة</h2><div class="small muted">تتشغّل مرة وحدة كي تضغط «جاوب» (ولا في بداية المكالمة الواردة)، ومن بعد يكمّل المساعد.</div>
           <div id="simrec"></div><div id="simintros" class="stack" style="gap:8px"></div></div>` : ''}
         <div class="card stack"><h2>الزبون يعيّط للمتجر</h2><div class="row"><input id="infrom" inputmode="tel" placeholder="رقم المتصل 05..." class="grow"><button class="btn primary" id="inbtn">📞 عيّط</button></div></div>
@@ -178,8 +205,25 @@ export async function callSimPage(main) {
       </div>
       <div class="card stack" id="conv"><div class="empty">اختار مكالمة ولا عيّط للمتجر</div></div>
     </div>`;
-  picker = await mountVoicePicker($('#vpick'), { serverVoices: cfg.voices.voices });
-  const play = (rep) => { if (voiceOn && rep?.actions) playActions(rep.actions, picker.choice); };
+  picker = await mountVoicePicker($('#vpick'), { serverVoices: cfg.voices.voices, onChange: () => { warned = false; setTimeout(() => picker && renderLatency()); } });
+  const renderLatency = () => {
+    const ok = session.filter((m) => !m.error && !m.cached);
+    if (!session.length) { $('#latency').innerHTML = picker.choice?.kind === 'spybox' ? '<div class="note">كل ردّ يتولّد في SpyBox ويتحسب. التأخير يتقاس هنا.</div>' : ''; return; }
+    const avg = ok.length ? Math.round(ok.reduce((s, m) => s + m.ms_total, 0) / ok.length) : null;
+    const v = latencyVerdict(avg);
+    $('#latency').innerHTML = `<div class="acc stack" style="gap:4px"><b>التأخير في هاذ الجلسة</b><div>آخر ردّ: ${metricLine(session.at(-1))}</div>
+      <div>المتوسط: <b>${fmtMs(avg)}</b> على ${ok.length} توليد · المصروف: ${session.reduce((s, m) => s + (m.cached || m.error ? 0 : (m.credits_charged ?? m.credits_estimated ?? 0)), 0)} SBC</div><span class="badge b-${v.tone}">${v.text}</span></div>`;
+  };
+  const play = async (rep) => {
+    if (!voiceOn || !rep?.actions) return;
+    if (picker.choice?.kind === 'spybox' && !warned) {
+      const say = rep.actions.find((a) => a.type === 'say');
+      const q = say ? await api('POST', '/api/voices/quote', { voice: picker.choice.id, text: say.speech || say.text }).catch(() => null) : null;
+      if (!confirm(`صوت ${picker.choice.id.slice(3)} مدفوع: كل ردّ يتولّد في SpyBox (هاذ الردّ ≈ ${q?.estimated_credits ?? '?'} SBC). نكمّلو؟`)) { voiceOn = false; return loadConv(); }
+      warned = true;
+    }
+    playActions(rep.actions, picker.choice, { onMetric: (m) => { metrics.set(`${current}:${m.text}`, m); session.push(m); renderLatency(); loadConv(); } });
+  };
 
   // المقدّمات: تسجيل/رفع + اختيار للصادرة والواردة (يتحفظ مباشرة)
   const loadIntros = async () => {
@@ -220,13 +264,14 @@ export async function callSimPage(main) {
       <div class="row"><label class="switch small"><input type="checkbox" id="voiceon" ${voiceOn ? 'checked' : ''}> شغّل الصوت</label><label class="switch small"><input type="checkbox" id="showspeech" ${showSpeech ? 'checked' : ''}> اعرض النص المخصّص للصوت</label></div>
       <div class="msgs callmsgs">${c.transcript.map((m, i) => `<div class="msg ${m.who === 'customer' ? 'out' : 'in'}"><div class="who">${m.who === 'customer' ? 'الزبون (أنت)' : m.play ? '▶ مقدّمة مسجّلة' : 'المساعد 🤖'}</div>
         ${m.play ? `<audio controls preload="none" src="/api/media/${m.media_id}/audio" style="width:220px;max-width:100%"></audio>` : `<div class="body">${esc(showSpeech && m.speech ? m.speech : m.text)}</div>`}
-        ${m.who === 'bot' && !m.play && m.speech ? `<button type="button" class="btn sm ghost" data-replay="${i}">🔊</button>` : ''}</div>`).join('')}</div>
+        ${m.who === 'bot' && !m.play && m.speech ? `<button type="button" class="btn sm ghost" data-replay="${i}">🔊</button>` : ''}
+        ${metrics.get(`${c.id}:${m.speech}`) ? `<div class="meta"><span>${metricLine(metrics.get(`${c.id}:${m.speech}`))}</span></div>` : ''}</div>`).join('')}</div>
       ${live ? `<div class="chips">${['ايه', 'لا', 'واش نتا روبو؟', 'عيطلي على الخمسة العشية', 'خليني نخمم', 'نحب نبدل العنوان', 'نحب نلغي الكوموند', 'وين راهي الكوموند؟', 'نحب نهدر مع موظف'].map((t) => `<button class="chip" data-t="${esc(t)}">${esc(t)}</button>`).join('')}</div>
         <form class="composer" id="sayf" style="border:1px solid var(--line);border-radius:12px"><input id="saytext" class="grow" placeholder="واش يقول الزبون..." autocomplete="off"><button class="btn primary">قول</button><button type="button" class="btn danger" id="hang">سكّر</button></form>` : ''}`;
     const box = $('.callmsgs'); box.scrollTop = box.scrollHeight;
     $('#voiceon').onchange = (e) => { voiceOn = e.target.checked; if (!voiceOn) stopPlayback(); };
     $('#showspeech').onchange = (e) => { showSpeech = e.target.checked; loadConv(); };
-    $$('[data-replay]').forEach((b) => b.onclick = () => { const m = c.transcript[Number(b.dataset.replay)]; playActions([{ type: 'say', speech: m.speech }], picker.choice); });
+    $$('[data-replay]').forEach((b) => b.onclick = () => { const m = c.transcript[Number(b.dataset.replay)]; playActions([{ type: 'say', speech: m.speech }], picker.choice, { onMetric: (x) => { metrics.set(`${c.id}:${x.text}`, x); session.push(x); renderLatency(); } }); });
     const send = async (text) => { const r = await act(() => api('POST', `/api/sim/calls/${current}/say`, { text })); play(r.reply); loadConv(); loadSide(); };
     $('#sayf') && ($('#sayf').onsubmit = (e) => { e.preventDefault(); const t = $('#saytext').value.trim(); if (t) { $('#saytext').value = ''; send(t); } });
     $$('#conv .chip').forEach((b) => b.onclick = () => send(b.dataset.t));

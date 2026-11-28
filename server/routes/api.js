@@ -24,6 +24,7 @@ import * as calls from '../calls/engine.js';
 import { saveIntro, listMedia, getMedia, deleteMedia, mediaPath } from '../calls/media.js';
 import { listVoices, synthesize, cloneVoice, SAMPLE_TEXT, voiceInfo } from '../calls/voices.js';
 import { toSpeech, SAMPLE_SPEECH_TEXT } from '../calls/speech.js';
+import * as spybox from '../calls/spybox.js';
 import { callsBridgeReady } from '../config.js';
 import fs from 'node:fs';
 
@@ -413,6 +414,7 @@ api.get('/api/voices/sample', async (req, res) => {
   const v = voiceInfo(req.query.voice);
   const text = String(req.query.text || SAMPLE_SPEECH_TEXT).slice(0, 400);
   const speech = toSpeech(text);
+  if (v.provider === 'spybox') return send(res, 200, { browser: false, provider: 'spybox', paid: true, gender: v.gender, text, speech, note: 'صوت مدفوع — استعمل «قدّر التكلفة» ثم «ولّد واسمع»' });
   if (v.provider !== 'elevenlabs' || req.query.format === 'text') return send(res, 200, { browser: v.provider !== 'elevenlabs', gender: v.gender, text, speech, note: v.provider === 'twilio' ? 'هنا يتقرا بصوت المتصفح — صوت Twilio الحقيقي يتسمع في المكالمة التجريبية' : v.provider === 'elevenlabs' ? '' : 'صوت المتصفح' });
   const rel = await synthesize(req.query.voice, speech);
   const file = mediaPath(rel);
@@ -460,4 +462,49 @@ api.post('/api/sim/calls/:id/say', async (req, res) => {
 api.post('/api/sim/calls/run-due', async (req, res) => {
   const at = req.body.now ? new Date(req.body.now) : new Date();
   send(res, 200, { dialed: await calls.runDue(at) });
+});
+
+// ───── SpyBox Gemini TTS: الحالة، تقدير التكلفة، التوليد، والتأخير ─────
+const sbText = (b) => toSpeech(String(b.text || SAMPLE_SPEECH_TEXT).slice(0, 2000));
+const sbVoice = (b) => { const v = String(b.voice || 'sb:Puck'); if (!/^sb:[A-Za-z]+$/.test(v) || !spybox.GEMINI_VOICES[v.slice(3)]) throw httpErr(400, 'صوت SpyBox غير معروف'); return v; };
+const jobOut = (j) => ({
+  id: j.id, cached: !!j.cached, voice: j.voice, chars: j.text.length, credits_estimated: j.credits_estimated, credits_charged: j.cached ? 0 : j.credits_charged,
+  ms_total: j.cached ? 0 : j.ms_total, ms_create: j.ms_create, ms_wait: j.ms_wait, ms_download: j.ms_download, polls: j.polls, audio_url: `/api/voices/jobs/${j.id}/audio`,
+});
+api.get('/api/voices/spybox', async (req, res) => {
+  let bal = null, balError = null;
+  if (spybox.configured()) { try { bal = await spybox.balance(); } catch (e) { balError = e.message; } }
+  send(res, 200, { configured: spybox.configured(), model: config.spybox.model, balance: bal, balance_error: balError, stats: spybox.stats() });
+});
+api.post('/api/voices/quote', async (req, res) => {
+  const voice = sbVoice(req.body), speech = sbText(req.body);
+  const q = await spybox.quote(voice, speech);
+  send(res, 200, { ...q, voice, speech });
+});
+api.post('/api/voices/generate', async (req, res) => {
+  const voice = sbVoice(req.body), speech = sbText(req.body);
+  const j = await spybox.generate(voice, speech, { source: String(req.body.source || 'dashboard').slice(0, 40) });
+  audit('tts.generate', { user: req.user, details: { voice, chars: speech.length, cached: !!j.cached, credits: j.credits_charged ?? j.credits_estimated, ms: j.ms_total } });
+  send(res, 200, { job: jobOut(j), speech });
+});
+api.get('/api/voices/jobs/:id/audio', (req, res) => {
+  const j = db.get("SELECT * FROM tts_jobs WHERE id=? AND status='completed'", Number(req.params.id));
+  if (!j) throw httpErr(404, 'غير موجود');
+  const file = mediaPath(j.file);
+  res.writeHead(200, { 'Content-Type': j.file.endsWith('.wav') ? 'audio/wav' : j.file.endsWith('.ogg') ? 'audio/ogg' : 'audio/mpeg', 'Content-Length': fs.statSync(file).size, 'Cache-Control': 'private, max-age=600' });
+  fs.createReadStream(file).pipe(res);
+});
+// تحضير النصوص الثابتة مسبقاً (الافتتاحية) باش تكون فورية في المكالمة
+api.post('/api/voices/pregenerate', async (req, res) => {
+  admin(req);
+  const s = getSetting('calls');
+  const voice = sbVoice(req.body);
+  const texts = [s.scripts.outbound_opening, s.scripts.inbound_opening].map(toSpeech);
+  if (req.body.dry_run) {
+    const qs = await Promise.all(texts.map((t) => spybox.quote(voice, t)));
+    return send(res, 200, { estimated_credits: qs.reduce((n, q) => n + (q.estimated_credits || 0), 0), items: qs });
+  }
+  const out = [];
+  for (const t of texts) out.push(jobOut(await spybox.generate(voice, t, { source: 'pregenerate' })));
+  send(res, 200, { items: out });
 });

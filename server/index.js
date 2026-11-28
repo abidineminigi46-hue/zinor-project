@@ -51,7 +51,7 @@ export function createServer() {
         if (!/^(intros|tts)\/[\w.-]+$/.test(rel) || !verifySigned(rel, req.query.exp, req.query.sig)) return send(res, 403, 'forbidden');
         const file = mediaPath(rel);
         if (!fs.existsSync(file)) return send(res, 404, 'not found');
-        res.writeHead(200, { 'Content-Type': rel.endsWith('.wav') ? 'audio/wav' : 'audio/mpeg', 'Cache-Control': 'private, max-age=600' });
+        res.writeHead(200, { 'Content-Type': rel.endsWith('.wav') ? 'audio/wav' : rel.endsWith('.ogg') ? 'audio/ogg' : 'audio/mpeg', 'Cache-Control': 'private, max-age=600' });
         return fs.createReadStream(file).pipe(res);
       }
       send(res, 404, 'not found');

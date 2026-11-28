@@ -133,6 +133,14 @@ CREATE TABLE IF NOT EXISTS media(
   id INTEGER PRIMARY KEY, kind TEXT NOT NULL DEFAULT 'intro', name TEXT NOT NULL, mime TEXT NOT NULL, file TEXT NOT NULL,
   size INTEGER NOT NULL, uploaded_by INTEGER, created_at TEXT NOT NULL DEFAULT (datetime('now')));
 
+-- الأصوات المولّدة (SpyBox…): التكلفة والتأخير لكل جملة + الذاكرة باش ما نخلّصوش نفس الجملة مرتين
+CREATE TABLE IF NOT EXISTS tts_jobs(
+  id INTEGER PRIMARY KEY, provider TEXT NOT NULL, voice TEXT NOT NULL, text_hash TEXT NOT NULL, text TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'running', file TEXT, generation_id TEXT, credits_estimated INTEGER, credits_charged INTEGER,
+  ms_create INTEGER, ms_wait INTEGER, ms_download INTEGER, ms_total INTEGER, polls INTEGER, error TEXT, source TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')));
+CREATE INDEX IF NOT EXISTS idx_tts_hash ON tts_jobs(provider, voice, text_hash, status);
+
 -- "شركة توصيل" تجريبية تحاكي API حقيقية (للتجربة بلا مفاتيح)
 CREATE TABLE IF NOT EXISTS sim_parcels(
   id INTEGER PRIMARY KEY, carrier_code TEXT NOT NULL, account_id INTEGER NOT NULL, reference TEXT NOT NULL,

@@ -1,5 +1,5 @@
 // الصوت في المتصفح: اختيار صوت عربي، قراءة النص المخصّص للصوت، تشغيل المقدّمة، والتسجيل من الميكرو
-import { esc, $, api, toast } from './core.js';
+import { esc, $, api, toast, modal } from './core.js';
 
 // ───── أصوات المتصفح ─────
 export function browserVoices() {
@@ -61,7 +61,7 @@ function speakOnce(text, voice, token) {
  * يشغّل ردّ المساعد: { type:'play', media_id } ثم { type:'say', speech }
  * choice = { kind:'browser', voice } | { kind:'server', id:'el:...' }
  */
-export async function playActions(actions, choice) {
+export async function playActions(actions, choice, { onMetric } = {}) {
   stopPlayback();
   const token = playToken;
   for (const a of actions || []) {
@@ -69,7 +69,14 @@ export async function playActions(actions, choice) {
     if (a.type === 'play') await playAudio(`/api/media/${a.media_id}/audio`, token);
     else if (a.type === 'say') {
       const text = a.speech || a.text;
-      if (choice?.kind === 'server') await playAudio(`/api/voices/tts?voice=${encodeURIComponent(choice.id)}&text=${encodeURIComponent(text)}`, token);
+      if (choice?.kind === 'spybox') {
+        try {
+          const t0 = performance.now();
+          const { job } = await api('POST', '/api/voices/generate', { voice: choice.id, text, source: 'simulator' });
+          onMetric?.({ ...job, ms_client: Math.round(performance.now() - t0), text });
+          await playAudio(job.audio_url, token);
+        } catch (e) { toast(e.message, 'err'); onMetric?.({ error: e.message, text }); }
+      } else if (choice?.kind === 'server') await playAudio(`/api/voices/tts?voice=${encodeURIComponent(choice.id)}&text=${encodeURIComponent(text)}`, token);
       else if (choice?.kind === 'browser' && choice.voice) await speakOnce(text, choice.voice, token);
     }
   }
@@ -81,13 +88,15 @@ export async function mountVoicePicker(el, { serverVoices = [], onChange } = {})
   const saved = (() => { try { return localStorage.getItem('zinor.simVoice') || ''; } catch { return ''; } })();
   const opts = [
     ...diag.voices.map((v) => ({ key: `b:${v.voiceURI || v.name}`, label: `${v.name} (${v.lang}) — صوت المتصفح`, choice: { kind: 'browser', voice: v } })),
+    ...serverVoices.filter((v) => v.provider === 'spybox' && !v.disabled).map((v) => ({ key: `s:${v.id}`, label: `${v.label} — مدفوع`, choice: { kind: 'spybox', id: v.id } })),
     ...serverVoices.filter((v) => v.provider === 'elevenlabs').map((v) => ({ key: `s:${v.id}`, label: `${v.label} — يتولّد على الخادم`, choice: { kind: 'server', id: v.id } })),
   ];
   let current = opts.find((o) => o.key === saved) || opts[0] || null;
   el.innerHTML = `${opts.length ? `<label class="f">الصوت اللي يقرا ردود المساعد في المحاكي<select data-vsel>${opts.map((o) => `<option value="${esc(o.key)}" ${o === current ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>
       <div class="row"><button type="button" class="btn sm" data-vsample>▶ اسمع عيّنة بالدارجة</button><button type="button" class="btn sm ghost" data-vstop>⏹ وقّف</button></div>` : ''}
+    ${serverVoices.some((v) => v.provider === 'spybox' && v.disabled) ? '<div class="small muted">أصوات SpyBox (Puck…) تبان هنا كي تحط SPYBOX_API_KEY في ملف .env وتعاود تشغّل الخادم.</div>' : ''}
     ${diag.ok ? '<div class="small muted">الأصوات العربية تاع المتصفح تنطق بالفصحى؛ النص مكتوب بالدارجة بحروف عربية باش يتقرا كامل.</div>'
-      : `<div class="alert warn" data-vwarn><b>الصوت العربي ما راهوش متوفر:</b> ${esc(diag.reason)}${opts.length ? '<br>تقدر تستعمل صوت ElevenLabs من القائمة.' : ''}</div>`}
+      : `<div class="alert warn" data-vwarn><b>الصوت العربي ما راهوش متوفر:</b> ${esc(diag.reason)}${opts.length ? '<br>تقدر تختار صوت من الخادم (SpyBox Puck ولا ElevenLabs) من القائمة فوق.' : ''}</div>`}
     <details class="small"><summary class="muted" style="cursor:pointer">النص المخصّص للصوت (عيّنة)</summary><div class="note" data-vtext style="margin-top:6px"></div></details>`;
   const sample = await api('GET', '/api/voices/sample?format=text');
   $('[data-vtext]', el).textContent = sample.speech;
@@ -96,7 +105,7 @@ export async function mountVoicePicker(el, { serverVoices = [], onChange } = {})
     try { localStorage.setItem('zinor.simVoice', current.key); } catch {}
     onChange?.(current?.choice);
   });
-  $('[data-vsample]', el)?.addEventListener('click', () => playActions([{ type: 'say', speech: sample.speech }], current?.choice));
+  $('[data-vsample]', el)?.addEventListener('click', () => (current?.choice?.kind === 'spybox' ? spyboxSample(current.choice.id) : playActions([{ type: 'say', speech: sample.speech }], current?.choice)));
   $('[data-vstop]', el)?.addEventListener('click', stopPlayback);
   onChange?.(current?.choice || null);
   return { diag, get choice() { return current?.choice || null; } };
@@ -182,4 +191,38 @@ export function mountRecorder(el, { onSaved } = {}) {
     pending = null; show('[data-rpreview]', false); $('[data-rname]', el).value = '';
     onSaved?.(r.media);
   };
+}
+
+// ───── SpyBox: التأخير والتكلفة ─────
+export const fmtMs = (ms) => (ms == null ? '—' : ms < 1000 ? `${ms} ms` : `${(ms / 1000).toFixed(1)} ث`);
+export function latencyVerdict(ms) {
+  if (ms == null) return { tone: 'gray', text: 'مازال ما قسناش' };
+  if (ms <= 1500) return { tone: 'green', text: 'يصلح لمكالمة مباشرة' };
+  if (ms <= 3000) return { tone: 'amber', text: 'مقبول، بصح الزبون يحسّ بسكتة — حضّر الجمل الثابتة مسبقاً' };
+  return { tone: 'red', text: 'بطيء للردود المتغيّرة في مكالمة مباشرة — يصلح للمقدّمة والجمل الثابتة المحضّرة مسبقاً' };
+}
+export const metricLine = (j) => (j.error ? `⚠️ ${esc(j.error)}` : j.cached ? '⚡ من الذاكرة · 0 SBC'
+  : `⏱ ${fmtMs(j.ms_total)} (إنشاء ${fmtMs(j.ms_create)} · توليد ${fmtMs(j.ms_wait)} · تحميل ${fmtMs(j.ms_download)}) · ${j.credits_charged ?? j.credits_estimated ?? '?'} SBC`);
+
+/** عيّنة SpyBox: نوريو التكلفة (dry_run) قبل ما نولّدو */
+export async function spyboxSample(voice, text) {
+  let q, bal;
+  try { [q, bal] = await Promise.all([api('POST', '/api/voices/quote', { voice, text }), api('GET', '/api/voices/spybox')]); }
+  catch (e) { return toast(e.message, 'err'); }
+  const m = modal(`عيّنة ${voice.slice(3)} — SpyBox Gemini`, `
+    <div class="kv small"><dt>التكلفة التقديرية</dt><dd><b>${q.cached ? '0 SBC (راهي في الذاكرة)' : `${q.estimated_credits} SBC`}</b></dd>
+      <dt>الرصيد المتاح</dt><dd>${bal.balance ? `${bal.balance.available} SBC` : esc(bal.balance_error || '—')}</dd><dt>طول النص</dt><dd>${q.chars} حرف</dd></div>
+    <div class="note small" style="margin-top:8px">${esc(q.speech)}</div>
+    <div data-sbres class="stack" style="margin-top:8px"></div>`, { submitLabel: q.cached ? 'اسمع' : `ولّد واسمع (${q.estimated_credits} SBC)`, onSubmit: async (fd, bg) => {
+    const box = $('[data-sbres]', bg);
+    box.innerHTML = '<div class="muted small">… راه يتولّد في SpyBox</div>';
+    const t0 = performance.now();
+    const { job } = await api('POST', '/api/voices/generate', { voice, text, source: 'sample' });
+    window.dispatchEvent(new Event('zinor:tts'));
+    const v = latencyVerdict(job.cached ? null : job.ms_total);
+    box.innerHTML = `<audio controls autoplay src="${job.audio_url}" style="width:100%"></audio><div class="small">${metricLine(job)}</div>
+      <div class="small muted">الوقت اللي شافو المتصفح: ${fmtMs(Math.round(performance.now() - t0))}</div>${job.cached ? '' : `<span class="badge b-${v.tone}">${v.text}</span>`}`;
+    return false; // نخلّيو النافذة مفتوحة باش تسمع
+  } });
+  return m;
 }
